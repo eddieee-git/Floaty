@@ -111,11 +111,17 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
 
     func show() {
         note.isHidden = false
+        note.isHiddenWithAll = false
         panel.orderFrontRegardless()
     }
 
     func hide() {
         note.isHidden = true
+        panel.orderOut(nil)
+    }
+
+    func hideWithAll() {
+        note.isHiddenWithAll = true
         panel.orderOut(nil)
     }
 

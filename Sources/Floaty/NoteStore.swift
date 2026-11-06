@@ -49,6 +49,7 @@ final class NoteStore: ObservableObject {
         guard let i = notes.firstIndex(where: { $0.id == id }) else { return nil }
         notes[i].deletedAt = nil
         notes[i].isHidden = false
+        notes[i].isHiddenWithAll = false
         save()
         return notes[i]
     }

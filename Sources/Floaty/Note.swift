@@ -20,6 +20,8 @@ struct Note: Codable, Identifiable, Equatable {
     var frame = CGRect(x: 200, y: 200, width: 240, height: 220)
     var isPinned = true
     var isHidden = false
+    /// 모두 숨기기로 사라진 상태. 앱을 다시 켜도 유지하되, 개별로 숨긴 `isHidden`과는 따로 둔다.
+    var isHiddenWithAll = false
     /// 제목 표시줄만 남긴 상태. `frame`은 펼친 상태의 크기를 유지한다.
     var isCollapsed = false
     var createdAt = Date()
@@ -73,6 +75,7 @@ struct Note: Codable, Identifiable, Equatable {
         frame = try c.decodeIfPresent(CGRect.self, forKey: .frame) ?? defaults.frame
         isPinned = try c.decodeIfPresent(Bool.self, forKey: .isPinned) ?? defaults.isPinned
         isHidden = try c.decodeIfPresent(Bool.self, forKey: .isHidden) ?? defaults.isHidden
+        isHiddenWithAll = try c.decodeIfPresent(Bool.self, forKey: .isHiddenWithAll) ?? defaults.isHiddenWithAll
         isCollapsed = try c.decodeIfPresent(Bool.self, forKey: .isCollapsed) ?? defaults.isCollapsed
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? defaults.createdAt
         modifiedAt = try c.decodeIfPresent(Date.self, forKey: .modifiedAt) ?? createdAt

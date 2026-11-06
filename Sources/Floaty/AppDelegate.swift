@@ -314,7 +314,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             onDuplicate: { [weak self] id in self?.duplicate(id) }
         )
         controllers[note.id] = controller
-        if !note.isHidden { controller.panel.orderFrontRegardless() }
+        if !note.isHidden && !note.isHiddenWithAll { controller.panel.orderFrontRegardless() }
     }
 
     @objc private func newNote() {
@@ -351,6 +351,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         copy.createdAt = Date()
         copy.modifiedAt = copy.createdAt
         copy.isHidden = false
+        copy.isHiddenWithAll = false
         copy.alarmDate = nil
         copy.frame = copy.frame.offsetBy(dx: 24, dy: -24)
         present(copy, body: source.textView.attributedString())
@@ -433,7 +434,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleAll() {
         let anyVisible = controllers.values.contains { $0.panel.isVisible }
         if anyVisible {
-            controllers.values.forEach { $0.panel.orderOut(nil) }
+            controllers.values.filter { $0.panel.isVisible }.forEach { $0.hideWithAll() }
         } else {
             controllers.values.forEach { $0.show() }
             NSApp.activate(ignoringOtherApps: true)

@@ -3,7 +3,7 @@ import Carbon
 
 /// 전역 단축키로 실행할 수 있는 동작.
 enum HotKeyAction: String, CaseIterable {
-    case newNote, toggleAll, toggleCollapse, toggleCurrentCollapse, toggleCurrentHidden
+    case newNote, toggleAll, toggleCollapse, toggleCurrentCollapse, toggleCurrentHidden, trashCurrent
 
     var title: String {
         switch self {
@@ -12,6 +12,7 @@ enum HotKeyAction: String, CaseIterable {
         case .toggleCollapse: return "모두 최소화/펼치기"
         case .toggleCurrentCollapse: return "현재 스티커 최소화/펼치기"
         case .toggleCurrentHidden: return "현재 스티커 숨기기/표시"
+        case .trashCurrent: return "현재 스티커 삭제"
         }
     }
 }

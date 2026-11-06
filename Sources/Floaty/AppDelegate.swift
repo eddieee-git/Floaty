@@ -9,8 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotKeys: [HotKey] = []
     /// 마지막으로 포커스를 받은 스티커. 개별 단축키의 대상이며, 다른 앱으로 옮겨 가거나 숨겨도 유지한다.
     private var currentNoteID: UUID?
-    /// 숨길 때 시스템이 다른 스티커로 넘기는 포커스를 현재 스티커 변경으로 치지 않으려는 표시.
-    private var isHidingCurrentNote = false
+    /// 숨기거나 삭제할 때 시스템이 다른 스티커로 넘기는 포커스를 현재 스티커 변경으로 치지 않으려는 표시.
+    private var ignoresFocusHandover = false
     private var hotKeySubscription: AnyCancellable?
     private var hotKeyItems: [HotKeyAction: NSMenuItem] = [:]
     private var trashWindow: TrashWindowController?
@@ -127,6 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case .toggleCollapse: toggleCollapseAll()
         case .toggleCurrentCollapse: toggleCurrentCollapse()
         case .toggleCurrentHidden: toggleCurrentHidden()
+        case .trashCurrent: trashCurrent()
         }
     }
 
@@ -259,7 +260,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func windowDidBecomeKey(_ notification: Notification) {
-        if !isHidingCurrentNote { setCurrentNote(from: notification.object as? NSWindow) }
+        if !ignoresFocusHandover { setCurrentNote(from: notification.object as? NSWindow) }
     }
 
     private func setCurrentNote(from window: NSWindow?) {
@@ -274,13 +275,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         controller.toggleCollapsed()
     }
 
+    /// 보이지 않는 스티커를 모르고 지우지 않도록 보이는 것만 지운다.
+    private func trashCurrent() {
+        guard let id = currentNoteID, let controller = controllers[id], controller.panel.isVisible else { return }
+        moveToTrash(id)
+    }
+
     private func toggleCurrentHidden() {
         guard let id = currentNoteID, let controller = controllers[id] else { return }
         if controller.panel.isVisible {
             // 다시 눌렀을 때 이 스티커가 돌아오도록 포커스가 넘어가는 동안은 대상을 유지한다.
-            isHidingCurrentNote = true
+            ignoresFocusHandover = true
             controller.hide()
-            DispatchQueue.main.async { self.isHidingCurrentNote = false }
+            DispatchQueue.main.async { self.ignoresFocusHandover = false }
         } else {
             controller.show()
             controller.panel.makeKeyAndOrderFront(nil)
@@ -396,7 +403,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func moveToTrash(_ id: UUID) {
         guard confirmMoveToTrash(), let controller = controllers.removeValue(forKey: id) else { return }
         SoundEffect.trash.play()
+        // 단축키를 연달아 눌러도 포커스를 넘겨받은 다른 스티커까지 지우지 않게 한다.
+        ignoresFocusHandover = true
         controller.close()
+        DispatchQueue.main.async { self.ignoresFocusHandover = false }
         store.trash(id: id)
     }
 

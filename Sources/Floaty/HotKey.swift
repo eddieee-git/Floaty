@@ -24,7 +24,17 @@ struct KeyCombo: Codable, Equatable {
     var modifiers: UInt32
     var key: String
 
-    static let defaults = [HotKeyAction.toggleAll.rawValue: KeyCombo(keyCode: UInt32(kVK_ANSI_F), modifiers: UInt32(cmdKey | optionKey), key: "F")]
+    static let defaults: [String: KeyCombo] = {
+        let controlCommand = UInt32(controlKey | cmdKey), controlOption = UInt32(controlKey | optionKey)
+        return [
+            HotKeyAction.newNote.rawValue: KeyCombo(keyCode: UInt32(kVK_ANSI_N), modifiers: controlCommand, key: "N"),
+            HotKeyAction.toggleAll.rawValue: KeyCombo(keyCode: UInt32(kVK_ANSI_H), modifiers: controlCommand, key: "H"),
+            HotKeyAction.toggleCollapse.rawValue: KeyCombo(keyCode: UInt32(kVK_ANSI_M), modifiers: controlCommand, key: "M"),
+            HotKeyAction.toggleCurrentCollapse.rawValue: KeyCombo(keyCode: UInt32(kVK_ANSI_M), modifiers: controlOption, key: "M"),
+            HotKeyAction.toggleCurrentHidden.rawValue: KeyCombo(keyCode: UInt32(kVK_ANSI_H), modifiers: controlOption, key: "H"),
+            HotKeyAction.trashCurrent.rawValue: KeyCombo(keyCode: UInt32(kVK_Delete), modifiers: controlCommand, key: "⌫"),
+        ]
+    }()
 
     /// 따로 있던 모두 최소화·모두 펼치기 단축키를 합친 토글로 옮긴다. 둘 다 있었으면 최소화 쪽을 남긴다.
     static func migrated(_ combos: [String: KeyCombo]) -> [String: KeyCombo] {

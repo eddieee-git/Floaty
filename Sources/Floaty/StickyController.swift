@@ -630,6 +630,17 @@ struct StickyView: View {
                 title
                     .font(.system(size: 12, weight: .semibold))
 
+                // 접으면 아래 줄이 없으므로 켜져 있는 것만 위 줄에 보여 준다.
+                if controller.note.isCollapsed {
+                    if controller.note.alarmDate != nil { alarmMenu }
+                    if controller.note.isLocked { lockMenu }
+                }
+
+                headerButton(controller.note.isPinned ? "pin.fill" : "pin",
+                             help: controller.note.isPinned ? "항상 위 해제" : "항상 위") {
+                    controller.note.isPinned.toggle()
+                }
+
                 Menu {
                     Button("제목 변경") { startEditingTitle() }
                     Divider()
@@ -654,23 +665,12 @@ struct StickyView: View {
                 .menuIndicator(.hidden)
                 .fixedSize()
 
-                // 접으면 아래 줄이 없으므로 켜져 있는 것만 위 줄에 보여 준다.
-                if controller.note.isCollapsed {
-                    if controller.note.alarmDate != nil { alarmMenu }
-                    if controller.note.isLocked { lockMenu }
-                }
-
-                headerButton("trash", help: "휴지통으로 이동") { controller.delete() }
-
                 headerButton(controller.note.isCollapsed ? "chevron.down" : "chevron.up",
                              help: controller.note.isCollapsed ? "펼치기" : "최소화") {
                     toggleCollapse()
                 }
 
-                headerButton(controller.note.isPinned ? "pin.fill" : "pin",
-                             help: controller.note.isPinned ? "항상 위 해제" : "항상 위") {
-                    controller.note.isPinned.toggle()
-                }
+                headerButton("trash", help: "휴지통으로 이동") { controller.delete() }
             }
             .padding(.horizontal, 10)
             .frame(height: StickyController.headerHeight)

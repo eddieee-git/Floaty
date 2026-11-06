@@ -63,7 +63,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         RunLoop.main.add(timer, forMode: .common)
         alarmTimer = timer
-        if store.activeNotes.isEmpty {
+        // 메뉴바 앱이라 처음 설치했을 때만 첫 스티커로 실행된 것을 알린다. 그 뒤로는 있던 그대로 띄운다.
+        if store.isFirstRun {
             newNote()
         } else {
             store.activeNotes.forEach(open)

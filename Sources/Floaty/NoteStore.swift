@@ -7,6 +7,8 @@ final class NoteStore: ObservableObject {
     @Published private(set) var notes: [Note] = []
     private let url: URL
     private let bodiesDir: URL
+    /// 저장 파일이 아직 없다. 스티커를 모두 지운 뒤에는 파일이 남으므로 처음 설치한 때와 구분된다.
+    let isFirstRun: Bool
 
     var activeNotes: [Note] { notes.filter { !$0.isTrashed } }
     var trashedNotes: [Note] { notes.filter(\.isTrashed) }
@@ -16,6 +18,7 @@ final class NoteStore: ObservableObject {
             .appendingPathComponent("Floaty", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         url = dir.appendingPathComponent("notes.json")
+        isFirstRun = !FileManager.default.fileExists(atPath: url.path)
         bodiesDir = dir.appendingPathComponent("bodies", isDirectory: true)
         try? FileManager.default.createDirectory(at: bodiesDir, withIntermediateDirectories: true)
         if let data = try? Data(contentsOf: url),

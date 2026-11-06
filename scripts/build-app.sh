@@ -1,0 +1,28 @@
+#!/bin/zsh
+# build/Floaty.app과 배포용 build/Floaty.dmg를 만든다. Xcode 없이 Command Line Tools만으로 빌드한다.
+# Apple 실리콘 Mac 전용이다.
+set -e
+cd "$(dirname "$0")/.."
+
+swift build -c release --arch arm64
+
+app=build/Floaty.app
+rm -rf "$app"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+cp .build/arm64-apple-macosx/release/Floaty "$app/Contents/MacOS/Floaty"
+cp Resources/Info.plist "$app/Contents/Info.plist"
+cp Resources/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
+# 개발자 인증서가 없으므로 이 Mac에서 실행할 수 있게 임시 서명만 한다.
+codesign --force --sign - "$app"
+
+# 내려받은 쪽에서 응용 프로그램 폴더로 끌어다 놓을 수 있게 바로가기를 함께 넣는다.
+staging=build/dmg
+rm -rf "$staging" build/Floaty.dmg
+mkdir -p "$staging"
+cp -R "$app" "$staging/"
+ln -s /Applications "$staging/Applications"
+hdiutil create -quiet -volname Floaty -srcfolder "$staging" -format UDZO build/Floaty.dmg
+rm -rf "$staging"
+
+echo "$app"
+echo build/Floaty.dmg

@@ -13,14 +13,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var ignoresFocusHandover = false
     private var hotKeySubscription: AnyCancellable?
     private var hotKeyItems: [HotKeyAction: NSMenuItem] = [:]
-    private var trashWindow: TrashWindowController?
+    private lazy var managerWindow: NoteManagerWindowController = {
+        let model = NoteManagerModel(store: store, settings: settings)
+        model.controller = { [weak self] id in self?.controllers[id] }
+        model.onReveal = { [weak self] id in self?.reveal(id) }
+        model.onNewMemo = { [weak self] in self?.newMemo() }
+        model.onTrash = { [weak self] id in self?.moveToTrash(id) }
+        model.onRestore = { [weak self] id in self?.restoreFromTrash(id) }
+        return NoteManagerWindowController(model: model)
+    }()
     private var opacityMenu: NSMenu?
     private let settings = AppSettings()
     private var settingsWindow: SettingsWindowController?
     private var opacitySubscription: AnyCancellable?
     private var opacityScopeSubscription: AnyCancellable?
     private var opacityNewOnlyItem: NSMenuItem?
-    private var searchWindow: SearchWindowController?
     private var alarmTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -82,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // 지금 앞에 있는 스티커에 전달된다.
         let file = NSMenu(title: "파일")
         file.addItem(withTitle: "찾기…", action: #selector(showSearch), keyEquivalent: "f").target = self
+        file.addItem(withTitle: "새로 만들기", action: #selector(newMemoInManager), keyEquivalent: "n").target = self
         file.addItem(withTitle: "복제", action: #selector(StickyController.duplicateNote(_:)), keyEquivalent: "d")
         file.addItem(withTitle: "파일로 저장…", action: #selector(StickyController.saveToFile(_:)), keyEquivalent: "s")
         file.addItem(withTitle: "인쇄…", action: #selector(StickyController.printNote(_:)), keyEquivalent: "p")
@@ -162,11 +170,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let notesMenu = NSMenu()
         notesMenu.delegate = self
         menu.addItem(withTitle: "스티커", action: nil, keyEquivalent: "").submenu = notesMenu
-        menu.addItem(withTitle: "찾기…", action: #selector(showSearch), keyEquivalent: "f").target = self
+        menu.addItem(withTitle: "스티커 관리…", action: #selector(showManager), keyEquivalent: "l").target = self
         menu.addItem(withTitle: "파일에서 불러오기…", action: #selector(importFiles), keyEquivalent: "").target = self
         menu.addItem(withTitle: "모두 파일로 저장…", action: #selector(saveAllToFiles), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "휴지통…", action: #selector(showTrash), keyEquivalent: "").target = self
         menu.addItem(withTitle: "설정…", action: #selector(showSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Floaty 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -209,11 +216,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         controller.panel.makeKeyAndOrderFront(nil)
     }
 
+    @objc private func showManager() {
+        managerWindow.show()
+    }
+
+    /// ⌘F는 관리 창을 열고 검색칸에 바로 입력하게 한다.
     @objc private func showSearch() {
-        if searchWindow == nil {
-            searchWindow = SearchWindowController(store: store) { [weak self] id in self?.reveal(id) }
-        }
-        searchWindow?.show()
+        managerWindow.show(focusSearch: true)
+    }
+
+    /// ⌘N: 관리 창에서는 화면에 띄우지 않는 메모를, 그 밖에서는 새 스티커를 만든다.
+    @objc private func newMemoInManager() {
+        if managerWindow.isKeyWindow { managerWindow.model.newMemo() } else { newNote() }
+    }
+
+    /// 화면에 띄우지 않고 관리 창에서 쓰는 메모.
+    private func newMemo() -> UUID {
+        SoundEffect.newNote.play()
+        var note = makeNote()
+        note.isHidden = true
+        store.upsert(note)
+        open(note)
+        return note.id
     }
 
     /// 투명도 단계 서브메뉴. 메뉴 안 커스텀 뷰(슬라이더)는 macOS 26 상태 메뉴에서 그려지지 않아 표준 항목으로 만들고,
@@ -433,12 +457,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         open(note)
     }
 
-    @objc private func showTrash() {
-        if trashWindow == nil {
-            trashWindow = TrashWindowController(store: store) { [weak self] id in self?.restoreFromTrash(id) }
-        }
-        trashWindow?.show()
-    }
 
     /// 하나라도 보이면 전부 숨기고(개별 숨김 상태는 유지), 모두 안 보이면 전부 다시 띄운다.
     @objc private func toggleAll() {

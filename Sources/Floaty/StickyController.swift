@@ -87,6 +87,11 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
     }
 
     private func setupTextView() {
+        Self.configure(textView, in: scrollView)
+    }
+
+    /// 스티커와 관리 창의 편집기가 같은 설정을 쓴다.
+    static func configure(_ textView: FormattingTextView, in scrollView: NSScrollView) {
         textView.isRichText = true
         textView.importsGraphics = true
         textView.allowsUndo = true
@@ -346,6 +351,13 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
 
     // MARK: NSTextViewDelegate
 
+    /// 서식 도구 모음의 동작을 이 스티커의 편집기에 보낸다.
+    func applyFormat(_ action: (FormattingTextView) -> Void) {
+        panel.makeFirstResponder(textView)
+        action(textView)
+        updateFormatState()
+    }
+
     func updateFormatState() {
         let state = textView.formatState
         if state != formatState { formatState = state }
@@ -357,10 +369,15 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
 
     func textDidChange(_ notification: Notification) {
         updateFormatState()
+        bodyDidChange()
+        textView.fitAttachments()
+    }
+
+    /// 본문이 바뀌었다. 관리 창의 편집기는 같은 본문을 함께 쓰므로 거기서 고쳐도 이것을 부른다.
+    func bodyDidChange() {
         // 이름·크기 표시용 일반 텍스트는 목록 파일에, 서식 있는 본문은 잠시 뒤 본문 파일에 저장한다.
         note.text = textView.string
         note.modifiedAt = Date()
-        textView.fitAttachments()
         pendingBodySave?.cancel()
         let work = DispatchWorkItem { [weak self] in
             self?.pendingBodySave = nil
@@ -388,7 +405,7 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
 }
 
 /// AppKit 뷰를 SwiftUI에 그대로 끼운다. 상태는 컨트롤러가 직접 관리한다.
-private struct HostedView: NSViewRepresentable {
+struct HostedView: NSViewRepresentable {
     let view: NSView
     func makeNSView(context: Context) -> NSView { view }
     func updateNSView(_ nsView: NSView, context: Context) {}
@@ -421,8 +438,10 @@ private struct TitleDragArea: NSViewRepresentable {
 }
 
 /// 제목 아래에 항상 보이는 서식 도구 모음. 메뉴와 같은 동작을 본문 편집기에 보낸다.
-private struct FormatBar: View {
-    @ObservedObject var controller: StickyController
+/// 스티커와 관리 창이 함께 쓰며, `apply`는 각자의 편집기에 동작을 보낸다.
+struct FormatBar: View {
+    let state: FormattingTextView.FormatState
+    let apply: ((FormattingTextView) -> Void) -> Void
 
     @State private var pickingTextColor = false
     @State private var pickingHighlight = false
@@ -478,7 +497,7 @@ private struct FormatBar: View {
             Divider()
             Button("다른 글씨체…") { apply { $0.showFontPanel(nil) } }
         } label: {
-            Text(controller.formatState.fontName).lineLimit(1)
+            Text(state.fontName).lineLimit(1)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -491,7 +510,7 @@ private struct FormatBar: View {
                 Button("\(Int(size))") { apply { $0.setFontSize(size) } }
             }
         } label: {
-            Text("\(Int(controller.formatState.fontSize.rounded()))")
+            Text("\(Int(state.fontSize.rounded()))")
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -502,7 +521,7 @@ private struct FormatBar: View {
             pickingTextColor = true
         } label: {
             // 지금 입력되는 색을 그대로 보여 준다. 기본색은 테마에 따라 검정이나 흰색이다.
-            let color = controller.formatState.textColor.map { Color(nsColor: $0) } ?? .primary
+            let color = state.textColor.map { Color(nsColor: $0) } ?? .primary
             Text("A").foregroundStyle(color).underline(color: color)
         }
         .buttonStyle(.borderless)
@@ -517,7 +536,7 @@ private struct FormatBar: View {
         Button {
             pickingHighlight = true
         } label: {
-            let highlight = controller.formatState.highlight
+            let highlight = state.highlight
             Image(systemName: "highlighter")
                 .foregroundStyle(highlight == nil ? Color.primary : .black)
                 .padding(.horizontal, 2)
@@ -531,12 +550,6 @@ private struct FormatBar: View {
                 apply { $0.setHighlight(color) }
             }
         }
-    }
-
-    private func apply(_ action: (FormattingTextView) -> Void) {
-        controller.panel.makeFirstResponder(controller.textView)
-        action(controller.textView)
-        controller.updateFormatState()
     }
 
     private func button(_ symbol: String, _ help: String, _ action: @escaping (FormattingTextView) -> Void) -> some View {
@@ -685,7 +698,7 @@ struct StickyView: View {
             // 접으면 창이 제목 표시줄 높이뿐이다. 아래 줄을 남겨 두면 내용이 창보다 커져 제목이 잘린다.
             if !controller.note.isCollapsed {
                 if !controller.isContentHidden {
-                    FormatBar(controller: controller)
+                    FormatBar(state: controller.formatState, apply: controller.applyFormat)
                 }
 
                 if let date = controller.note.alarmDate {

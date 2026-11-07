@@ -2,8 +2,9 @@ import AppKit
 
 /// 스티커 본문 편집기. 굵게·기울임·밑줄·취소선·글머리표·정렬·글씨체와 이미지 붙여넣기를 지원한다.
 final class FormattingTextView: NSTextView {
+    /// Helvetica Neue는 저장한 시스템 글꼴을 다시 읽을 때 쓰이는 이름이라 목록에 두지 않는다(`NoteStore.restoringSystemFont`).
     static let fontFamilies = ["Apple SD Gothic Neo", "AppleMyungjo", "Nanum Gothic", "Nanum Myeongjo",
-                               "Helvetica Neue", "Times New Roman", "Menlo"]
+                               "Times New Roman", "Menlo"]
         .filter(NSFontManager.shared.availableFontFamilies.contains)
     static let fontSizes: [CGFloat] = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 36, 48]
 

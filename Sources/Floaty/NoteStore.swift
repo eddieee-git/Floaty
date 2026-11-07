@@ -71,8 +71,27 @@ final class NoteStore: ObservableObject {
 
     /// 저장된 본문이 없으면(이전 버전의 일반 텍스트 스티커) nil.
     func loadBody(id: UUID) -> NSAttributedString? {
-        guard let data = try? Data(contentsOf: bodyURL(id)) else { return nil }
-        return NSAttributedString(rtfd: data, documentAttributes: nil)
+        guard let data = try? Data(contentsOf: bodyURL(id)),
+              let body = NSAttributedString(rtfd: data, documentAttributes: nil) else { return nil }
+        return Self.restoringSystemFont(body)
+    }
+
+    /// 시스템 글꼴은 RTFD에 이름이 제대로 남지 않아 다시 읽으면 Helvetica Neue가 된다.
+    /// 글씨체 목록에서 Helvetica Neue를 빼 두었으므로, 읽을 때 같은 크기와 굵기의 시스템 글꼴로 되돌린다.
+    /// 기울임은 시스템 글꼴에 서체가 없어 편집기처럼 기울여 그린다.
+    static func restoringSystemFont(_ body: NSAttributedString) -> NSAttributedString {
+        let result = NSMutableAttributedString(attributedString: body)
+        let whole = NSRange(location: 0, length: result.length)
+        body.enumerateAttribute(.font, in: whole) { value, range, _ in
+            guard let font = value as? NSFont, font.familyName == "Helvetica Neue" else { return }
+            let traits = font.fontDescriptor.symbolicTraits
+            result.addAttribute(.font, value: NSFont.systemFont(ofSize: font.pointSize,
+                                                                 weight: traits.contains(.bold) ? .bold : .regular), range: range)
+            if traits.contains(.italic), body.attribute(.obliqueness, at: range.location, effectiveRange: nil) == nil {
+                result.addAttribute(.obliqueness, value: 0.2, range: range)
+            }
+        }
+        return result
     }
 
     func saveBody(_ body: NSAttributedString, id: UUID) {

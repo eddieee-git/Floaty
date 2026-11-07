@@ -25,12 +25,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         return NoteManagerWindowController(model: model)
     }()
-    private var opacityMenu: NSMenu?
     private let settings = AppSettings()
     private var settingsWindow: SettingsWindowController?
     private var opacitySubscription: AnyCancellable?
-    private var opacityScopeSubscription: AnyCancellable?
-    private var opacityNewOnlyItem: NSMenuItem?
+    private var statusMenu: NSMenu?
+    private var relockItem: NSMenuItem?
     private var alarmTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -39,16 +38,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setupStatusItem()
         // 설정 창의 슬라이더나 메뉴의 단계 선택은 "새 스티커에만 적용"이 꺼져 있을 때 스티커별 값을 덮어 모두 같게 맞춘다.
         // 시작할 때 들어오는 현재 값은 건너뛰어야 스티커별 값이 유지된다.
-        updateOpacityChecks(settings.opacity)
         opacitySubscription = settings.$opacity.dropFirst().sink { [weak self] value in
             guard let self else { return }
             if !self.settings.opacityNewNotesOnly {
                 self.controllers.values.forEach { $0.note.opacity = value }
             }
-            self.updateOpacityChecks(value)
-        }
-        opacityScopeSubscription = settings.$opacityNewNotesOnly.sink { [weak self] newOnly in
-            self?.opacityNewOnlyItem?.state = newOnly ? .on : .off
         }
         hotKeySubscription = settings.$hotKeys.combineLatest(settings.$isRecordingHotKey).sink { [weak self] combos, isRecording in
             self?.registerHotKeys(isRecording ? [:] : combos)
@@ -161,30 +155,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.target = self
             hotKeyItems[action] = item
         }
+        // 자주 쓰는 것부터: 만들고 찾기, 모든 스티커에 하는 동작, 파일, 앱. 하위 메뉴는 한 단계까지만 둔다.
         addHotKeyItem(.newNote, #selector(newNote))
-        addHotKeyItem(.toggleAll, #selector(toggleAll))
-        addHotKeyItem(.toggleCollapse, #selector(toggleCollapseAll))
-        menu.addItem(withTitle: L("모두 다시 잠그기"), action: #selector(relockAll), keyEquivalent: "").target = self
-        menu.addItem(.separator())
-        menu.addItem(makeOpacityItem())
-        menu.addItem(.separator())
-
+        menu.addItem(withTitle: L("스티커 관리…"), action: #selector(showManager), keyEquivalent: "l").target = self
         // 숨긴 스티커를 포함한 전체 목록. 열 때마다 다시 만든다.
         let notesMenu = NSMenu()
         notesMenu.delegate = self
         menu.addItem(withTitle: L("스티커"), action: nil, keyEquivalent: "").submenu = notesMenu
-        menu.addItem(withTitle: L("스티커 관리…"), action: #selector(showManager), keyEquivalent: "l").target = self
-        menu.addItem(withTitle: L("파일에서 불러오기…"), action: #selector(importFiles), keyEquivalent: "").target = self
-        menu.addItem(withTitle: L("모두 파일로 저장…"), action: #selector(saveAllToFiles), keyEquivalent: "").target = self
+        menu.addItem(.separator())
+
+        addHotKeyItem(.toggleAll, #selector(toggleAll))
+        addHotKeyItem(.toggleCollapse, #selector(toggleCollapseAll))
+        // 잠긴 스티커가 있을 때만 보인다.
+        relockItem = menu.addItem(withTitle: L("모두 다시 잠그기"), action: #selector(relockAll), keyEquivalent: "")
+        relockItem?.target = self
+        menu.addItem(.separator())
+
+        let fileMenu = NSMenu()
+        fileMenu.addItem(withTitle: L("불러오기…"), action: #selector(importFiles), keyEquivalent: "").target = self
+        fileMenu.addItem(withTitle: L("모두 저장…"), action: #selector(saveAllToFiles), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("파일"), action: nil, keyEquivalent: "").submenu = fileMenu
         menu.addItem(.separator())
         menu.addItem(withTitle: L("설정…"), action: #selector(showSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: L("Floaty 종료"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.delegate = self
         item.menu = menu
+        statusMenu = menu
         statusItem = item
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        if menu === statusMenu {
+            relockItem?.isHidden = !controllers.values.contains { $0.note.isLocked }
+            return
+        }
         menu.removeAllItems()
         let notes = controllers.values.map(\.note).sorted { $0.createdAt < $1.createdAt }
         guard !notes.isEmpty else {
@@ -241,38 +246,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         store.upsert(note)
         open(note)
         return note.id
-    }
-
-    /// 투명도 단계 서브메뉴. 메뉴 안 커스텀 뷰(슬라이더)는 macOS 26 상태 메뉴에서 그려지지 않아 표준 항목으로 만들고,
-    /// 세밀한 조절은 설정 창의 슬라이더로 한다.
-    private func makeOpacityItem() -> NSMenuItem {
-        let submenu = NSMenu()
-        for percent in stride(from: 100, through: Int(AppSettings.opacityRange.lowerBound * 100), by: -10) {
-            let item = submenu.addItem(withTitle: "\(percent)%", action: #selector(opacityChanged(_:)), keyEquivalent: "")
-            item.target = self
-            item.tag = percent
-        }
-        submenu.addItem(.separator())
-        let newOnly = submenu.addItem(withTitle: L("새 스티커에만 적용"), action: #selector(toggleOpacityNewOnly), keyEquivalent: "")
-        newOnly.target = self
-        opacityNewOnlyItem = newOnly
-        opacityMenu = submenu
-        let item = NSMenuItem(title: L("투명도"), action: nil, keyEquivalent: "")
-        item.submenu = submenu
-        return item
-    }
-
-    @objc private func opacityChanged(_ sender: NSMenuItem) {
-        settings.opacity = Double(sender.tag) / 100
-    }
-
-    @objc private func toggleOpacityNewOnly() {
-        settings.opacityNewNotesOnly.toggle()
-    }
-
-    private func updateOpacityChecks(_ opacity: Double) {
-        let current = Int((opacity * 100).rounded())
-        opacityMenu?.items.filter { $0.tag > 0 }.forEach { $0.state = $0.tag == current ? .on : .off }
     }
 
     @objc private func showSettings() {

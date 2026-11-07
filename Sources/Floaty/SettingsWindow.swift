@@ -14,7 +14,7 @@ final class SettingsWindowController {
     func show() {
         if window == nil {
             let w = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 520, height: 410),
+                contentRect: NSRect(x: 0, y: 0, width: 520, height: 520),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
@@ -33,7 +33,7 @@ final class SettingsWindowController {
 struct SettingsView: View {
     enum Tab: String, CaseIterable {
         case general = "일반"
-        case newNotes = "새 스티커"
+        case stickies = "스티커"
         case dates = "날짜"
         case colors = "색상"
         case sounds = "소리"
@@ -59,7 +59,7 @@ struct SettingsView: View {
             .padding(.top, 12)
 
             switch tab {
-            case .newNotes: newNotes
+            case .stickies: stickies
             case .general: general
             case .dates: dates
             case .colors: colors
@@ -121,9 +121,10 @@ struct SettingsView: View {
         .formStyle(.grouped)
     }
 
-    private var newNotes: some View {
+    /// 새로 만들 스티커의 기본값과, 이미 있는 스티커에도 걸리는 값.
+    private var stickies: some View {
         Form {
-            Section {
+            Section(L("새 스티커")) {
                 Stepper(value: $settings.newNoteWidth, in: AppSettings.widthRange, step: 20) {
                     LabeledContent(L("너비"), value: "\(Int(settings.newNoteWidth))")
                 }
@@ -149,11 +150,26 @@ struct SettingsView: View {
                     }
                 }
             }
+            Section(L("모든 스티커")) {
+                LabeledContent(L("투명도")) {
+                    HStack {
+                        Slider(value: $settings.opacity, in: AppSettings.opacityRange)
+                        Text("\(Int((settings.opacity * 100).rounded()))%")
+                            .monospacedDigit()
+                            .frame(width: 40, alignment: .trailing)
+                    }
+                }
+                Toggle(L("투명도는 새 스티커에만 적용"), isOn: $settings.opacityNewNotesOnly)
+                Picker(L("아래 줄 기본 표시"), selection: $settings.footerInfo) {
+                    ForEach(FooterInfo.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            }
         }
         .formStyle(.grouped)
     }
 
-    /// 앱 전체에 걸리는 설정. 위는 앱, 아래는 모든 스티커에 공통인 값이다.
+    /// 앱 전체에 걸리는 설정.
     private var general: some View {
         Form {
             Section {
@@ -173,21 +189,6 @@ struct SettingsView: View {
                 Toggle(L("로그인 시 자동 실행"), isOn: Binding(get: { settings.launchAtLogin }, set: settings.setLaunchAtLogin))
                     .disabled(!settings.canLaunchAtLogin)
                 Toggle(L("삭제하기 전에 확인"), isOn: $settings.confirmTrash)
-            }
-            Section(L("모든 스티커")) {
-                LabeledContent(L("투명도")) {
-                    HStack {
-                        Slider(value: $settings.opacity, in: AppSettings.opacityRange)
-                        Text("\(Int((settings.opacity * 100).rounded()))%")
-                            .monospacedDigit()
-                            .frame(width: 40, alignment: .trailing)
-                    }
-                }
-                Toggle(L("투명도는 새 스티커에만 적용"), isOn: $settings.opacityNewNotesOnly)
-                Picker(L("아래 줄 기본 표시"), selection: $settings.footerInfo) {
-                    ForEach(FooterInfo.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
             }
         }
         .formStyle(.grouped)

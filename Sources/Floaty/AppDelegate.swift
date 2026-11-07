@@ -71,9 +71,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         RunLoop.main.add(timer, forMode: .common)
         alarmTimer = timer
-        // 메뉴바 앱이라 처음 설치했을 때만 첫 스티커로 실행된 것을 알린다. 그 뒤로는 있던 그대로 띄운다.
+        // 메뉴바 앱이라 처음 설치했을 때만 안내 스티커로 실행된 것을 알린다. 그 뒤로는 있던 그대로 띄운다.
         if store.isFirstRun {
-            newNote()
+            showWelcome()
         } else {
             store.activeNotes.forEach(open)
         }
@@ -332,6 +332,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         controllers[note.id] = controller
         if !note.isHidden && !note.isHiddenWithAll { controller.panel.orderFrontRegardless() }
+    }
+
+    /// 화면 가운데쯤에 사용 안내 스티커를 띄운다.
+    private func showWelcome() {
+        let welcome = WelcomeNote.make(hotKeys: settings.hotKeys)
+        var note = makeNote()
+        note.title = welcome.title
+        note.colorIndex = 0
+        note.text = welcome.body.string
+        note.frame.size = CGSize(width: 360, height: 300)
+        if let screen = NSScreen.main?.visibleFrame {
+            note.frame.origin = CGPoint(x: screen.midX - 180, y: screen.midY - 100)
+        }
+        present(note, body: welcome.body)
     }
 
     @objc private func newNote() {

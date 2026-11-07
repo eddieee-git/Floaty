@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// 스티커 관리 창. 왼쪽에 모든 메모를, 오른쪽에 고른 메모의 정보와 편집기를 보여 준다.
-/// 화면에 띄우지 않은 메모도 여기서 쓰고 고치며, 휴지통도 이 창에서 다룬다.
+/// 숨긴 스티커도 여기서 메모장처럼 쓰고 고치며, 휴지통도 이 창에서 다룬다.
 final class NoteManagerWindowController: NSObject, NSWindowDelegate {
     let model: NoteManagerModel
     private var window: NSWindow?
@@ -43,8 +43,8 @@ final class NoteManagerWindowController: NSObject, NSWindowDelegate {
 
 enum NoteFilter: String, CaseIterable {
     case all = "전체"
-    case shown = "띄운 것"
-    case stored = "띄우지 않은 것"
+    case shown = "보이는 스티커"
+    case stored = "숨긴 스티커"
     case trash = "휴지통"
 }
 
@@ -78,6 +78,7 @@ final class NoteManagerModel: ObservableObject {
     var onNewMemo: () -> UUID? = { nil }
     var onTrash: (UUID) -> Void = { _ in }
     var onRestore: (UUID) -> Void = { _ in }
+    var onShowAll: () -> Void = {}
 
     /// 오른쪽 편집기. 같은 본문을 스티커와 함께 쓰므로 고른 메모가 바뀌면 떼어 낸다.
     private var editor: NoteEditor?
@@ -112,6 +113,9 @@ final class NoteManagerModel: ObservableObject {
     }
 
     func note(_ id: UUID) -> Note? { store.notes.first { $0.id == id } }
+
+    /// ⌃⌘H 모두 숨기기로 잠깐 가린 스티커가 있다. 목록에서는 보이는 스티커인데 화면에 없으므로 안내한다.
+    var isHidingAll: Bool { store.activeNotes.contains { $0.isHiddenWithAll && !$0.isHidden } }
 
     func editor(for controller: StickyController) -> NoteEditor {
         if let editor, editor.noteID == controller.note.id { return editor }
@@ -323,7 +327,22 @@ private struct NoteSidebar: View {
                     Image(systemName: "square.and.pencil")
                 }
                 .buttonStyle(.borderless)
-                .help("새 메모 (화면에 띄우지 않음)")
+                .help("숨긴 스티커로 새로 만들기")
+            }
+
+            if model.isHidingAll && model.filter != .trash {
+                HStack {
+                    Image(systemName: "eye.slash")
+                    Text("모두 숨김 중")
+                    Spacer()
+                    Button("다시 보이기") { model.onShowAll() }
+                        .controlSize(.small)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
             }
 
             List(notes, selection: $model.selection) { note in
@@ -362,8 +381,8 @@ private struct NoteSidebar: View {
             Button("영구 삭제") { model.deletePermanently(ids) }
         } else if !ids.isEmpty {
             Button("스티커로 보기") { ids.forEach(model.onReveal) }
-            Button("화면에 띄우기") { ids.forEach { model.setShown(true, $0) } }
-            Button("띄우지 않기") { ids.forEach { model.setShown(false, $0) } }
+            Button("보이기") { ids.forEach { model.setShown(true, $0) } }
+            Button("숨기기") { ids.forEach { model.setShown(false, $0) } }
             Divider()
             Button("휴지통으로 이동") { model.trash(ids) }
         }
@@ -385,7 +404,7 @@ private struct NoteRow: View {
                 Text(note.displayTitle).lineLimit(1)
                 HStack(spacing: 4) {
                     Text(settings.dateText(date))
-                    if note.isHidden { Image(systemName: "eye.slash").help("화면에 띄우지 않음") }
+                    if note.isHidden { Image(systemName: "eye.slash").help("숨긴 스티커") }
                     if note.isLocked { Image(systemName: "lock.fill").help("잠김") }
                     if note.alarmDate != nil { Image(systemName: "bell.fill").help("알람") }
                 }
@@ -415,9 +434,9 @@ private struct ActiveNoteDetail: View {
                     ColorMenu(index: $controller.note.colorIndex)
                 }
                 HStack(spacing: 14) {
-                    Toggle("화면에 띄우기", isOn: Binding(
-                        get: { !controller.note.isHidden },
-                        set: { model.setShown($0, controller.note.id) }
+                    Toggle("숨기기", isOn: Binding(
+                        get: { controller.note.isHidden },
+                        set: { model.setShown(!$0, controller.note.id) }
                     ))
                     Toggle("항상 위", isOn: $controller.note.isPinned)
                     Spacer()
@@ -526,8 +545,8 @@ private struct MultipleSelectionDetail: View {
                     Button("영구 삭제") { model.deletePermanently(ids) }
                     Button("되살리기") { model.restore(ids) }
                 } else {
-                    Button("띄우지 않기") { ids.forEach { model.setShown(false, $0) } }
-                    Button("화면에 띄우기") { ids.forEach { model.setShown(true, $0) } }
+                    Button("숨기기") { ids.forEach { model.setShown(false, $0) } }
+                    Button("보이기") { ids.forEach { model.setShown(true, $0) } }
                     Button("휴지통으로 이동") { model.trash(ids) }
                 }
             }

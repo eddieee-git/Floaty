@@ -20,6 +20,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         model.onNewMemo = { [weak self] in self?.newMemo() }
         model.onTrash = { [weak self] id in self?.moveToTrash(id) }
         model.onRestore = { [weak self] id in self?.restoreFromTrash(id) }
+        model.onShowAll = { [weak self] in
+            self?.controllers.values.filter { $0.note.isHiddenWithAll && !$0.note.isHidden }.forEach { $0.show() }
+        }
         return NoteManagerWindowController(model: model)
     }()
     private var opacityMenu: NSMenu?
@@ -225,12 +228,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         managerWindow.show(focusSearch: true)
     }
 
-    /// ⌘N: 관리 창에서는 화면에 띄우지 않는 메모를, 그 밖에서는 새 스티커를 만든다.
+    /// ⌘N: 관리 창에서는 숨긴 스티커를, 그 밖에서는 새 스티커를 만든다.
     @objc private func newMemoInManager() {
         if managerWindow.isKeyWindow { managerWindow.model.newMemo() } else { newNote() }
     }
 
-    /// 화면에 띄우지 않고 관리 창에서 쓰는 메모.
+    /// 숨긴 채로 만들어 관리 창에서 쓰는 메모.
     private func newMemo() -> UUID {
         SoundEffect.newNote.play()
         var note = makeNote()

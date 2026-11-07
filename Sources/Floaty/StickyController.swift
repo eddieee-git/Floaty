@@ -497,7 +497,7 @@ struct FormatBar: View {
             Divider()
             Button(L("다른 글씨체…")) { apply { $0.showFontPanel(nil) } }
         } label: {
-            Text(state.fontName).lineLimit(1)
+            Text(L(state.fontName)).lineLimit(1)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -644,6 +644,11 @@ struct StickyView: View {
     @FocusState private var titleFocused: Bool
 
     var body: some View {
+        // 언어를 바꾸면 도구 모음과 설명 풍선까지 모두 새 문구로 다시 그린다.
+        content.id(settings.language)
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 title
@@ -664,7 +669,7 @@ struct StickyView: View {
                     Button(L("제목 변경")) { startEditingTitle() }
                     Divider()
                     ForEach(Palette.colors.indices, id: \.self) { i in
-                        Button(Palette.colors[i].name) { controller.note.colorIndex = i }
+                        Button(L(Palette.colors[i].name)) { controller.note.colorIndex = i }
                     }
                     Divider()
                     Menu(L("알람")) { alarmItems }

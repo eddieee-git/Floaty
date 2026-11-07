@@ -106,9 +106,13 @@ final class AppSettings: ObservableObject {
     @Published var isRecordingHotKey = false
     /// 시스템이 거부해 등록하지 못한 동작.
     @Published var failedHotKeys: Set<HotKeyAction> = []
-    /// 고른 언어. 실행 중인 화면은 다시 시작해야 바뀐다.
+    /// 고른 언어. 바꾸면 열린 화면과 메뉴가 바로 바뀐다.
     @Published var language: AppLanguage {
-        didSet { defaults.set(language.rawValue, forKey: Localization.key) }
+        didSet {
+            defaults.set(language.rawValue, forKey: Localization.key)
+            applyLanguageDefaults()
+            Localization.language = language
+        }
     }
     @Published var theme: Theme {
         didSet {
@@ -182,6 +186,23 @@ final class AppSettings: ObservableObject {
               defaults.persistentDomain(forName: id)?.isEmpty ?? true,
               let old = defaults.persistentDomain(forName: "Floaty") else { return }
         defaults.setPersistentDomain(old, forName: id)
+    }
+
+    /// 날짜 표기를 직접 고르지 않았으면 언어에 맞는 표기로 바꾼다. 저장하지 않아야 다음에 언어를 바꿀 때도 따라간다.
+    private func applyLanguageDefaults() {
+        let isKorean = language == .korean
+        if defaults.object(forKey: Keys.dateStyle) == nil {
+            dateStyle = isKorean ? .dotted : .englishShort
+            defaults.removeObject(forKey: Keys.dateStyle)
+        }
+        if defaults.object(forKey: Keys.weekdayStyle) == nil {
+            weekdayStyle = isKorean ? .koreanShort : .englishShort
+            defaults.removeObject(forKey: Keys.weekdayStyle)
+        }
+        if defaults.object(forKey: Keys.timeStyle) == nil {
+            timeStyle = isKorean ? .koreanMeridiem : .englishMeridiem
+            defaults.removeObject(forKey: Keys.timeStyle)
+        }
     }
 
     func setLaunchAtLogin(_ isOn: Bool) {

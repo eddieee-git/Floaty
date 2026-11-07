@@ -26,9 +26,15 @@ enum AppLanguage: String, CaseIterable {
 enum Localization {
     static let key = "language"
 
-    /// 실행 중에는 바뀌지 않는다. 메뉴와 창을 모두 다시 만들지 않도록 언어 변경은 다시 시작할 때 적용한다.
-    static let language: AppLanguage = UserDefaults.standard.string(forKey: key)
-        .flatMap(AppLanguage.init) ?? .systemDefault
+    /// 바뀌면 `didChange`를 알린다. SwiftUI 화면은 설정을 지켜보다 다시 그리고, 메뉴와 창 제목은 알림을 받아 바꾼다.
+    static var language: AppLanguage = UserDefaults.standard.string(forKey: key)
+        .flatMap(AppLanguage.init) ?? .systemDefault {
+        didSet {
+            guard language != oldValue else { return }
+            NotificationCenter.default.post(name: didChange, object: nil)
+        }
+    }
+    static let didChange = Notification.Name("FloatyLanguageDidChange")
 
     /// 화면 문구는 한국어를 열쇠로 쓰고, 영어일 때 이 표에서 바꾼다. 표에 없으면 한국어가 그대로 나온다.
     static let english: [String: String] = [
@@ -204,8 +210,6 @@ enum Localization {
         "삭제하기 전에 확인": "Confirm before deleting",
         "테마": "Theme",
         "언어": "Language",
-        "언어를 바꾸려면 Floaty를 다시 시작해야 합니다.": "Restart Floaty to change the language.",
-        "지금 다시 시작": "Restart Now",
         "없음": "None",
         "파일 선택…": "Choose File…",
         "들어 보기": "Play",
@@ -253,20 +257,6 @@ enum Localization {
         "더블클릭해서 펼치기": "Double-click to expand",
         "더블클릭해서 접기": "Double-click to collapse",
     ]
-}
-
-extension Localization {
-    /// 앱을 끄고 잠시 뒤 다시 연다. `.app`이 아니면(개발 중 실행) 끄기만 한다.
-    static func relaunch() {
-        let path = Bundle.main.bundlePath
-        if path.hasSuffix(".app") {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/sh")
-            process.arguments = ["-c", "sleep 1; /usr/bin/open \"$0\"", path]
-            try? process.run()
-        }
-        NSApp.terminate(nil)
-    }
 }
 
 /// 화면 문구. 한국어 문구를 그대로 넘기면 고른 언어로 돌려준다.

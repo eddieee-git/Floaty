@@ -193,7 +193,8 @@ final class FormattingTextView: NSTextView {
 
     /// 도구 모음에 보여 줄 서식. `textColor`와 `highlight`가 nil이면 기본값이다.
     struct FormatState: Equatable {
-        var fontName = L("시스템")
+        /// 시스템 글꼴이면 한국어 열쇠 "시스템"이다. 화면에는 `L(fontName)`으로 보여 줘서 언어를 바꿔도 따라간다.
+        var fontName = "시스템"
         var fontSize = FormattingTextView.defaultFont.pointSize
         var textColor: NSColor?
         var highlight: NSColor?
@@ -212,7 +213,7 @@ final class FormattingTextView: NSTextView {
         let isDefaultColor = color?.usingColorSpace(.sRGB)?.brightnessComponent ?? 0 == 0
         return FormatState(
             // 시스템 글꼴과 한글 대체 글꼴은 이름이 점으로 시작한다.
-            fontName: family.isEmpty || family.hasPrefix(".") ? L("시스템") : family,
+            fontName: family.isEmpty || family.hasPrefix(".") ? "시스템" : family,
             fontSize: font.pointSize,
             textColor: isDefaultColor ? nil : color,
             highlight: attributes[.backgroundColor] as? NSColor

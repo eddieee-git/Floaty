@@ -9,6 +9,10 @@ final class NoteManagerWindowController: NSObject, NSWindowDelegate {
 
     init(model: NoteManagerModel) {
         self.model = model
+        super.init()
+        NotificationCenter.default.addObserver(forName: Localization.didChange, object: nil, queue: .main) { [weak self] _ in
+            self?.window?.title = L("스티커 관리")
+        }
     }
 
     func show(focusSearch: Bool = false) {
@@ -263,6 +267,8 @@ struct NoteManagerView: View {
             detail
                 .frame(minWidth: 360, maxWidth: .infinity, maxHeight: .infinity)
         }
+        // 언어를 바꾸면 안쪽 화면까지 모두 새 문구로 다시 그린다.
+        .id(settings.language)
     }
 
     @ViewBuilder
@@ -578,9 +584,9 @@ private struct ColorMenu: View {
                     index = i
                 } label: {
                     if i == index {
-                        Label(Palette.colors[i].name, systemImage: "checkmark")
+                        Label(L(Palette.colors[i].name), systemImage: "checkmark")
                     } else {
-                        Text(Palette.colors[i].name)
+                        Text(L(Palette.colors[i].name))
                     }
                 }
             }

@@ -10,17 +10,18 @@ enum Palette {
     /// 설정에서 바꾼 색. 다크에서는 글자가 밝아지므로 테마별로 따로 둔다.
     static var overrides: [String: Int] = [:]
 
+    /// `name`은 한국어 열쇠다. 화면에는 `L(name)`으로 보여 준다.
     static let colors: [(name: String, hex: UInt32, darkHex: UInt32)] = [
-        (L("노랑"), 0xFFF3A6, 0x6B5B12),
-        (L("복숭아"), 0xFFD8B5, 0x7A4A24),
-        (L("분홍"), 0xFFC9DE, 0x7A2F52),
-        (L("라벤더"), 0xE3D3FF, 0x523A8C),
-        (L("하늘"), 0xC9E6FF, 0x1F5580),
-        (L("민트"), 0xC4F2DE, 0x1A6650),
-        (L("연두"), 0xDDF5B8, 0x4A6B1E),
-        (L("모래"), 0xEFE4CF, 0x5E5038),
-        (L("회색"), 0xE4E6EA, 0x4A4D54),
-        (L("흰색"), 0xFFFFFF, 0x2C2C2E),
+        ("노랑", 0xFFF3A6, 0x6B5B12),
+        ("복숭아", 0xFFD8B5, 0x7A4A24),
+        ("분홍", 0xFFC9DE, 0x7A2F52),
+        ("라벤더", 0xE3D3FF, 0x523A8C),
+        ("하늘", 0xC9E6FF, 0x1F5580),
+        ("민트", 0xC4F2DE, 0x1A6650),
+        ("연두", 0xDDF5B8, 0x4A6B1E),
+        ("모래", 0xEFE4CF, 0x5E5038),
+        ("회색", 0xE4E6EA, 0x4A4D54),
+        ("흰색", 0xFFFFFF, 0x2C2C2E),
     ]
 
     static func overrideKey(_ index: Int, _ part: Part, isDark: Bool) -> String {

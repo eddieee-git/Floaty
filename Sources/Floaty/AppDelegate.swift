@@ -36,6 +36,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.appearance = settings.theme.appearance
         setupMainMenu()
         setupStatusItem()
+        NotificationCenter.default.addObserver(forName: Localization.didChange, object: nil, queue: .main) { [weak self] _ in
+            self?.setupMainMenu()
+            self?.rebuildStatusMenu()
+        }
         // 설정 창의 슬라이더나 메뉴의 단계 선택은 "새 스티커에만 적용"이 꺼져 있을 때 스티커별 값을 덮어 모두 같게 맞춘다.
         // 시작할 때 들어오는 현재 값은 건너뛰어야 스티커별 값이 유지된다.
         opacitySubscription = settings.$opacity.dropFirst().sink { [weak self] value in
@@ -148,7 +152,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = MenuBarIcon.make()
+        statusItem = item
+        rebuildStatusMenu()
+    }
 
+    /// 언어를 바꾸면 다시 만든다.
+    private func rebuildStatusMenu() {
+        hotKeyItems = [:]
         let menu = NSMenu()
         func addHotKeyItem(_ action: HotKeyAction, _ selector: Selector) {
             let item = menu.addItem(withTitle: action.title, action: selector, keyEquivalent: "")
@@ -180,9 +190,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(withTitle: L("Floaty 종료"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.delegate = self
-        item.menu = menu
+        statusItem?.menu = menu
         statusMenu = menu
-        statusItem = item
+        updateHotKeyItems(settings.hotKeys)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {

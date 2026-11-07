@@ -9,6 +9,9 @@ final class SettingsWindowController {
 
     init(settings: AppSettings) {
         self.settings = settings
+        NotificationCenter.default.addObserver(forName: Localization.didChange, object: nil, queue: .main) { [weak self] _ in
+            self?.window?.title = L("Floaty 설정")
+        }
     }
 
     func show() {
@@ -175,12 +178,6 @@ struct SettingsView: View {
             Section {
                 Picker(L("언어"), selection: $settings.language) {
                     ForEach(AppLanguage.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                if settings.language != Localization.language {
-                    LabeledContent(L("언어를 바꾸려면 Floaty를 다시 시작해야 합니다.")) {
-                        Button(L("지금 다시 시작")) { Localization.relaunch() }
-                    }
-                    .font(.caption)
                 }
                 Picker(L("테마"), selection: $settings.theme) {
                     ForEach(AppSettings.Theme.allCases, id: \.self) { Text($0.title).tag($0) }
@@ -393,7 +390,7 @@ private struct ColorEditor: View {
 
     @ViewBuilder
     private func slot(_ index: Int) -> some View {
-        Text(Palette.colors[index].name)
+        Text(L(Palette.colors[index].name))
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, index < rows ? 0 : 12)
         picker(index, .header, L("제목"))
@@ -424,7 +421,7 @@ private struct ColorSwatches: View {
                     .overlay(Circle().strokeBorder(Color.accentColor, lineWidth: 2).padding(-3).opacity(selection == i ? 1 : 0))
                     .contentShape(Circle())
                     .onTapGesture { selection = i }
-                    .help(Palette.colors[i].name)
+                    .help(L(Palette.colors[i].name))
             }
         }
         .padding(3)

@@ -417,6 +417,31 @@ struct HostedView: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {}
 }
 
+/// 누르면 동작을 부른다. 창을 끌지 않고, 앞에 없던 창의 첫 클릭도 받는다.
+private struct ClickCatcher: NSViewRepresentable {
+    let action: () -> Void
+
+    final class CatcherView: NSView {
+        var action: () -> Void = {}
+        override var mouseDownCanMoveWindow: Bool { false }
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+        override func mouseDown(with event: NSEvent) {}
+        override func mouseUp(with event: NSEvent) {
+            if bounds.contains(convert(event.locationInWindow, from: nil)) { action() }
+        }
+    }
+
+    func makeNSView(context: Context) -> CatcherView {
+        let view = CatcherView()
+        view.action = action
+        return view
+    }
+
+    func updateNSView(_ nsView: CatcherView, context: Context) {
+        nsView.action = action
+    }
+}
+
 /// 제목 영역. 끌면 창이 움직이고, 더블클릭하면 스티커를 접거나 펼친다.
 private struct TitleDragArea: NSViewRepresentable {
     let onDoubleClick: () -> Void
@@ -742,8 +767,9 @@ struct StickyView: View {
                         Button(L("잠금 풀기")) { controller.unlock() }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .onTapGesture { controller.unlock() }
+                    // 창 배경을 끌면 창이 움직이는 설정 때문에 SwiftUI 탭 제스처로는 클릭이 오지 않는다.
+                    // 클릭을 직접 받는 뷰를 덮어 가려진 곳 어디를 눌러도 잠금 풀기로 간다.
+                    .overlay(ClickCatcher { controller.unlock() })
                 } else {
                     HostedView(view: controller.scrollView)
                         .padding(.horizontal, 2)

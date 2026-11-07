@@ -686,6 +686,9 @@ struct StickyView: View {
                     Button(L("인쇄…")) { controller.printNote(nil) }
                         .disabled(controller.isContentHidden)
                     Divider()
+                    if controller.note.isLocked {
+                        Button(L("잠금 없애기")) { controller.removeLock() }
+                    }
                     Button(L("숨기기")) { controller.hide() }
                     Button(L("삭제"), role: .destructive) { controller.delete() }
                 } label: {
@@ -782,25 +785,32 @@ struct StickyView: View {
         .help(controller.note.alarmDate.map { L("알람: %@", settings.dateText($0, compact: false)) } ?? L("알람 설정"))
     }
 
+    /// 누르면 바로 잠그기·잠금 풀기·다시 잠그기를 한다. 잠금 없애기는 길게 누르거나 팔레트 메뉴에서 한다.
     private var lockMenu: some View {
         Menu {
-            if !controller.note.isLocked {
-                Button(L("잠그기")) { controller.lock() }
-            } else {
-                if controller.isContentHidden {
-                    Button(L("잠금 풀기…")) { controller.unlock() }
-                } else {
-                    Button(L("다시 잠그기")) { controller.relock() }
-                }
+            if controller.note.isLocked {
                 Button(L("잠금 없애기")) { controller.removeLock() }
             }
         } label: {
             Image(systemName: lockSymbol)
+        } primaryAction: {
+            if !controller.note.isLocked {
+                controller.lock()
+            } else if controller.isContentHidden {
+                controller.unlock()
+            } else {
+                controller.relock()
+            }
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(L("잠금"))
+        .help(lockHelp)
+    }
+
+    private var lockHelp: String {
+        if !controller.note.isLocked { return L("잠그기") }
+        return controller.isContentHidden ? L("잠금 풀기 (길게 누르면 잠금 없애기)") : L("다시 잠그기 (길게 누르면 잠금 없애기)")
     }
 
     /// 알람이 깜빡이는 동안에는 붉게 물든다.

@@ -247,6 +247,8 @@ enum Localization {
         "잠금 풀기…": "Unlock…",
         "다시 잠그기": "Lock Again",
         "잠금 없애기": "Remove Lock",
+        "잠금 풀기 (길게 누르면 잠금 없애기)": "Unlock (press and hold to remove the lock)",
+        "다시 잠그기 (길게 누르면 잠금 없애기)": "Lock again (press and hold to remove the lock)",
         "%d일 %d시간": "%dd %dh",
         "%d일": "%dd",
         "%d시간 %d분": "%dh %dm",

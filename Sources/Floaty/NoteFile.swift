@@ -8,9 +8,9 @@ enum NoteFile {
 
         var title: String {
             switch self {
-            case .rtfd: return "서식과 이미지 (RTFD)"
-            case .rtf: return "서식 있는 텍스트 (RTF)"
-            case .text: return "일반 텍스트"
+            case .rtfd: return L("서식과 이미지 (RTFD)")
+            case .rtf: return L("서식 있는 텍스트 (RTF)")
+            case .text: return L("일반 텍스트")
             }
         }
 
@@ -80,9 +80,9 @@ enum NoteFile {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
-        panel.prompt = "저장"
-        panel.message = "스티커 \(items.count)개를 저장할 폴더를 고르세요."
-            + (lockedCount > 0 ? " 잠긴 스티커 \(lockedCount)개는 제외합니다." : "")
+        panel.prompt = L("저장")
+        panel.message = L("스티커 %d개를 저장할 폴더를 고르세요.", items.count)
+            + (lockedCount > 0 ? L(" 잠긴 스티커 %d개는 제외합니다.", lockedCount) : "")
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, let folder = panel.url else { return }
         do {

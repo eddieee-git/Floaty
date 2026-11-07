@@ -7,7 +7,7 @@ enum YearStyle: String, CaseIterable {
         switch self {
         case .full: return "2026"
         case .short: return "26"
-        case .none: return "표시 안 함"
+        case .none: return L("표시 안 함")
         }
     }
 
@@ -61,7 +61,7 @@ enum WeekdayStyle: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .none: return "표시 안 함"
+        case .none: return L("표시 안 함")
         case .koreanShort: return "(금)"
         case .koreanLong: return "금요일"
         case .hanjaShort: return "(金)"

@@ -14,9 +14,9 @@ final class AppSettings: ObservableObject {
 
         var title: String {
             switch self {
-            case .light: return "라이트"
-            case .dark: return "다크"
-            case .system: return "시스템"
+            case .light: return L("라이트")
+            case .dark: return L("다크")
+            case .system: return L("시스템")
             }
         }
 
@@ -106,6 +106,10 @@ final class AppSettings: ObservableObject {
     @Published var isRecordingHotKey = false
     /// 시스템이 거부해 등록하지 못한 동작.
     @Published var failedHotKeys: Set<HotKeyAction> = []
+    /// 고른 언어. 실행 중인 화면은 다시 시작해야 바뀐다.
+    @Published var language: AppLanguage {
+        didSet { defaults.set(language.rawValue, forKey: Localization.key) }
+    }
     @Published var theme: Theme {
         didSet {
             defaults.set(theme.rawValue, forKey: Keys.theme)
@@ -152,12 +156,15 @@ final class AppSettings: ObservableObject {
         opacityNewNotesOnly = defaults.object(forKey: Keys.opacityNewNotesOnly) as? Bool ?? true
         customColors = defaults.dictionary(forKey: Keys.customColors) as? [String: Int] ?? [:]
         footerInfo = defaults.string(forKey: Keys.footerInfo).flatMap(FooterInfo.init) ?? .modified
-        dateStyle = defaults.string(forKey: Keys.dateStyle).flatMap(DateStyle.init) ?? .dotted
+        // 날짜 표기를 따로 고르지 않았으면 화면 언어에 맞는 표기로 시작한다.
+        let isKorean = Localization.language == .korean
+        dateStyle = defaults.string(forKey: Keys.dateStyle).flatMap(DateStyle.init) ?? (isKorean ? .dotted : .englishShort)
         yearStyle = defaults.string(forKey: Keys.yearStyle).flatMap(YearStyle.init) ?? YearStyle.none
-        weekdayStyle = defaults.string(forKey: Keys.weekdayStyle).flatMap(WeekdayStyle.init) ?? .koreanShort
-        timeStyle = defaults.string(forKey: Keys.timeStyle).flatMap(TimeStyle.init) ?? .koreanMeridiem
+        weekdayStyle = defaults.string(forKey: Keys.weekdayStyle).flatMap(WeekdayStyle.init) ?? (isKorean ? .koreanShort : .englishShort)
+        timeStyle = defaults.string(forKey: Keys.timeStyle).flatMap(TimeStyle.init) ?? (isKorean ? .koreanMeridiem : .englishMeridiem)
         timeOnlyToday = defaults.object(forKey: Keys.timeOnlyToday) as? Bool ?? true
         hotKeys = defaults.data(forKey: Keys.hotKeys).flatMap { try? JSONDecoder().decode([String: KeyCombo].self, from: $0) }.map(KeyCombo.migrated) ?? KeyCombo.defaults
+        language = Localization.language
         theme = defaults.string(forKey: Keys.theme).flatMap(Theme.init) ?? .system
         sounds = defaults.dictionary(forKey: Keys.sounds) as? [String: String] ?? [:]
         soundEffects = defaults.object(forKey: Keys.soundEffects) as? Bool ?? false

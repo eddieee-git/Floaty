@@ -198,7 +198,7 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         guard !isAuthenticating else { return }
         isAuthenticating = true
         NSApp.activate(ignoringOtherApps: true)
-        LAContext().evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "잠긴 스티커를 열려고 합니다") { success, error in
+        LAContext().evaluatePolicy(.deviceOwnerAuthentication, localizedReason: L("잠긴 스티커를 열려고 합니다")) { success, error in
             DispatchQueue.main.async {
                 self.isAuthenticating = false
                 if success {
@@ -256,12 +256,12 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         picker.sizeToFit()
 
         let alert = NSAlert()
-        alert.messageText = "알람 설정"
-        alert.informativeText = "지정한 시각에 이 스티커만 앞으로 나타납니다."
+        alert.messageText = L("알람 설정")
+        alert.informativeText = L("지정한 시각에 이 스티커만 앞으로 나타납니다.")
         alert.accessoryView = picker
-        alert.addButton(withTitle: "설정")
-        alert.addButton(withTitle: "취소")
-        if note.alarmDate != nil { alert.addButton(withTitle: "알람 해제") }
+        alert.addButton(withTitle: L("설정"))
+        alert.addButton(withTitle: L("취소"))
+        if note.alarmDate != nil { alert.addButton(withTitle: L("알람 해제")) }
         NSApp.activate(ignoringOtherApps: true)
 
         switch alert.runModal() {
@@ -308,11 +308,11 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
 
     /// 아래 줄에 마우스를 올렸을 때 보여 줄 자세한 정보.
     func footerDetail() -> String {
-        var lines = ["마지막 수정: \(settings.dateText(note.modifiedAt, compact: false))"]
+        var lines = [L("마지막 수정: %@", settings.dateText(note.modifiedAt, compact: false))]
         if !isContentHidden {
-            lines.append("글자수: \(note.characterCount)자")
+            lines.append(L("글자수: %d자", note.characterCount))
             if let size = bodySize() {
-                lines.append("파일 크기: \(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))")
+                lines.append(L("파일 크기: %@", ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)))
             }
         }
         return lines.joined(separator: "\n")
@@ -461,7 +461,7 @@ struct FormatBar: View {
     var body: some View {
         HStack(spacing: 5) {
             fontControls
-            button("eraser", "서식 지우기 ⌘\\ (선택이 없으면 본문 전체)") { $0.clearFormatting(nil) }
+            button("eraser", L("서식 지우기 ⌘\\ (선택이 없으면 본문 전체)")) { $0.clearFormatting(nil) }
             Divider().frame(height: 12)
             styleButtons
         }
@@ -476,26 +476,26 @@ struct FormatBar: View {
 
     @ViewBuilder
     private var styleButtons: some View {
-        button("bold", "굵게 ⌘B") { $0.toggleBoldface(nil) }
-        button("italic", "기울임 ⌘I") { $0.toggleItalics(nil) }
-        button("underline", "밑줄 ⌘U") { $0.underline(nil) }
-        button("strikethrough", "취소선 ⌘⇧X") { $0.toggleStrikethrough(nil) }
+        button("bold", L("굵게 ⌘B")) { $0.toggleBoldface(nil) }
+        button("italic", L("기울임 ⌘I")) { $0.toggleItalics(nil) }
+        button("underline", L("밑줄 ⌘U")) { $0.underline(nil) }
+        button("strikethrough", L("취소선 ⌘⇧X")) { $0.toggleStrikethrough(nil) }
         Divider().frame(height: 12)
-        button("list.bullet", "글머리표 ⌘7") { $0.toggleBulletList(nil) }
-        button("text.alignleft", "왼쪽 정렬") { $0.alignLeft(nil) }
-        button("text.aligncenter", "가운데 정렬") { $0.alignCenter(nil) }
-        button("text.alignright", "오른쪽 정렬") { $0.alignRight(nil) }
+        button("list.bullet", L("글머리표 ⌘7")) { $0.toggleBulletList(nil) }
+        button("text.alignleft", L("왼쪽 정렬")) { $0.alignLeft(nil) }
+        button("text.aligncenter", L("가운데 정렬")) { $0.alignCenter(nil) }
+        button("text.alignright", L("오른쪽 정렬")) { $0.alignRight(nil) }
     }
 
     @ViewBuilder
     private var fontControls: some View {
         Menu {
-            Button("시스템 글꼴") { apply { $0.setFontFamily(nil) } }
+            Button(L("시스템 글꼴")) { apply { $0.setFontFamily(nil) } }
             ForEach(FormattingTextView.fontFamilies, id: \.self) { family in
                 Button(family) { apply { $0.setFontFamily(family) } }
             }
             Divider()
-            Button("다른 글씨체…") { apply { $0.showFontPanel(nil) } }
+            Button(L("다른 글씨체…")) { apply { $0.showFontPanel(nil) } }
         } label: {
             Text(state.fontName).lineLimit(1)
         }
@@ -503,7 +503,7 @@ struct FormatBar: View {
         .menuIndicator(.hidden)
         // 메뉴 버튼은 가장 긴 항목에 맞춰 넓어지므로 폭을 고정한다.
         .frame(width: 56)
-        .help("글씨체 ⌘T")
+        .help(L("글씨체 ⌘T"))
 
         Menu {
             ForEach(FormattingTextView.fontSizes, id: \.self) { size in
@@ -515,7 +515,7 @@ struct FormatBar: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .frame(width: 24)
-        .help("글자 크기")
+        .help(L("글자 크기"))
 
         Button {
             pickingTextColor = true
@@ -525,7 +525,7 @@ struct FormatBar: View {
             Text("A").foregroundStyle(color).underline(color: color)
         }
         .buttonStyle(.borderless)
-        .help("글자색")
+        .help(L("글자색"))
         .popover(isPresented: $pickingTextColor) {
             ColorChoices(colors: Self.textColors) { color in
                 pickingTextColor = false
@@ -543,7 +543,7 @@ struct FormatBar: View {
                 .background(highlight.map { Color(nsColor: $0) } ?? .clear, in: RoundedRectangle(cornerRadius: 3))
         }
         .buttonStyle(.borderless)
-        .help("형광펜")
+        .help(L("형광펜"))
         .popover(isPresented: $pickingHighlight) {
             ColorChoices(colors: Self.highlights) { color in
                 pickingHighlight = false
@@ -575,7 +575,7 @@ private struct StickyFooter<Controls: View>: View {
             Slider(value: $controller.opacity, in: AppSettings.opacityRange)
                 .controlSize(.mini)
                 .frame(width: 56)
-                .help("이 스티커의 투명도")
+                .help(L("이 스티커의 투명도"))
             Text("\(Int((controller.opacity * 100).rounded()))%")
                 .monospacedDigit()
                 .fixedSize()
@@ -604,7 +604,7 @@ private struct StickyFooter<Controls: View>: View {
                 Text(settings.dateText(controller.note.modifiedAt))
                 Text(controller.note.modifiedAt.formatted(.dateTime.month(.defaultDigits).day()))
             case .characters:
-                Text("\(controller.note.characterCount)자")
+                Text(L("%d자", controller.note.characterCount))
             }
             Color.clear.frame(width: 0, height: 0)
         }
@@ -656,27 +656,27 @@ struct StickyView: View {
                 }
 
                 headerButton(controller.note.isPinned ? "pin.fill" : "pin",
-                             help: controller.note.isPinned ? "항상 위 해제" : "항상 위") {
+                             help: controller.note.isPinned ? L("항상 위 해제") : L("항상 위")) {
                     controller.note.isPinned.toggle()
                 }
 
                 Menu {
-                    Button("제목 변경") { startEditingTitle() }
+                    Button(L("제목 변경")) { startEditingTitle() }
                     Divider()
                     ForEach(Palette.colors.indices, id: \.self) { i in
                         Button(Palette.colors[i].name) { controller.note.colorIndex = i }
                     }
                     Divider()
-                    Menu("알람") { alarmItems }
-                    Button("복제") { controller.duplicateNote(nil) }
+                    Menu(L("알람")) { alarmItems }
+                    Button(L("복제")) { controller.duplicateNote(nil) }
                         .disabled(controller.isContentHidden)
-                    Button("파일로 저장…") { controller.saveToFile(nil) }
+                    Button(L("파일로 저장…")) { controller.saveToFile(nil) }
                         .disabled(controller.isContentHidden)
-                    Button("인쇄…") { controller.printNote(nil) }
+                    Button(L("인쇄…")) { controller.printNote(nil) }
                         .disabled(controller.isContentHidden)
                     Divider()
-                    Button("숨기기") { controller.hide() }
-                    Button("삭제", role: .destructive) { controller.delete() }
+                    Button(L("숨기기")) { controller.hide() }
+                    Button(L("삭제"), role: .destructive) { controller.delete() }
                 } label: {
                     Image(systemName: "paintpalette")
                 }
@@ -685,11 +685,11 @@ struct StickyView: View {
                 .fixedSize()
 
                 headerButton(controller.note.isCollapsed ? "chevron.down" : "chevron.up",
-                             help: controller.note.isCollapsed ? "펼치기" : "최소화") {
+                             help: controller.note.isCollapsed ? L("펼치기") : L("최소화")) {
                     toggleCollapse()
                 }
 
-                headerButton("trash", help: "휴지통으로 이동") { controller.delete() }
+                headerButton("trash", help: L("휴지통으로 이동")) { controller.delete() }
             }
             .padding(.horizontal, 10)
             .frame(height: StickyController.headerHeight)
@@ -708,11 +708,11 @@ struct StickyView: View {
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text(controller.isAlarmRinging
                                  ? settings.dateText(date)
-                                 : "\(settings.dateText(date))에 알람 · \(remainingText(until: date, from: context.date)) 남음")
+                                 : L("%@에 알람 · %@ 남음", settings.dateText(date), remainingText(until: date, from: context.date)))
                                 .lineLimit(1)
                         }
                         Spacer()
-                        Button(controller.isAlarmRinging ? "알람 확인" : "해제") { controller.dismissAlarm() }
+                        Button(controller.isAlarmRinging ? L("알람 확인") : L("해제")) { controller.dismissAlarm() }
                     }
                     .font(.system(size: 12))
                     .padding(.horizontal, 10)
@@ -725,7 +725,7 @@ struct StickyView: View {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 28))
                             .foregroundStyle(.secondary)
-                        Button("잠금 풀기") { controller.unlock() }
+                        Button(L("잠금 풀기")) { controller.unlock() }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())
@@ -768,20 +768,20 @@ struct StickyView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(controller.note.alarmDate.map { "알람: \(settings.dateText($0, compact: false))" } ?? "알람 설정")
+        .help(controller.note.alarmDate.map { L("알람: %@", settings.dateText($0, compact: false)) } ?? L("알람 설정"))
     }
 
     private var lockMenu: some View {
         Menu {
             if !controller.note.isLocked {
-                Button("잠그기") { controller.lock() }
+                Button(L("잠그기")) { controller.lock() }
             } else {
                 if controller.isContentHidden {
-                    Button("잠금 풀기…") { controller.unlock() }
+                    Button(L("잠금 풀기…")) { controller.unlock() }
                 } else {
-                    Button("다시 잠그기") { controller.relock() }
+                    Button(L("다시 잠그기")) { controller.relock() }
                 }
-                Button("잠금 없애기") { controller.removeLock() }
+                Button(L("잠금 없애기")) { controller.removeLock() }
             }
         } label: {
             Image(systemName: lockSymbol)
@@ -789,7 +789,7 @@ struct StickyView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("잠금")
+        .help(L("잠금"))
     }
 
     /// 알람이 깜빡이는 동안에는 붉게 물든다.
@@ -814,23 +814,23 @@ struct StickyView: View {
     private func remainingText(until date: Date, from now: Date) -> String {
         let minutes = max(Int((date.timeIntervalSince(now) / 60).rounded(.up)), 1)
         let (days, hours, rest) = (minutes / 1440, minutes % 1440 / 60, minutes % 60)
-        if days > 0 { return hours > 0 ? "\(days)일 \(hours)시간" : "\(days)일" }
-        if hours > 0 { return rest > 0 ? "\(hours)시간 \(rest)분" : "\(hours)시간" }
-        return "\(rest)분"
+        if days > 0 { return hours > 0 ? L("%d일 %d시간", days, hours) : L("%d일", days) }
+        if hours > 0 { return rest > 0 ? L("%d시간 %d분", hours, rest) : L("%d시간", hours) }
+        return L("%d분", rest)
     }
 
     /// 스티커 메뉴와 종 아이콘에 함께 쓴다.
     @ViewBuilder
     private var alarmItems: some View {
         ForEach(StickyController.alarmDelays, id: \.self) { minutes in
-            Button(minutes < 60 ? "\(minutes)분 후" : "\(minutes / 60)시간 후") {
+            Button(minutes < 60 ? L("%d분 후", minutes) : L("%d시간 후", minutes / 60)) {
                 controller.setAlarm(Date().addingTimeInterval(TimeInterval(minutes * 60)))
             }
         }
         Divider()
-        Button("날짜와 시각 지정…") { controller.editAlarm() }
+        Button(L("날짜와 시각 지정…")) { controller.editAlarm() }
         if controller.note.alarmDate != nil {
-            Button("알람 해제") { controller.dismissAlarm() }
+            Button(L("알람 해제")) { controller.dismissAlarm() }
         }
     }
 
@@ -838,7 +838,7 @@ struct StickyView: View {
     @ViewBuilder
     private var title: some View {
         if isEditingTitle {
-            TextField(controller.note.previewLine ?? "제목", text: $controller.note.title)
+            TextField(controller.note.previewLine ?? L("제목"), text: $controller.note.title)
                 .textFieldStyle(.plain)
                 .focused($titleFocused)
                 .onSubmit { isEditingTitle = false }
@@ -848,12 +848,12 @@ struct StickyView: View {
         } else {
             ZStack(alignment: .leading) {
                 TitleDragArea(onDoubleClick: toggleCollapse)
-                Text(controller.note.title.isEmpty ? (controller.note.previewLine ?? "제목") : controller.note.title)
+                Text(controller.note.title.isEmpty ? (controller.note.previewLine ?? L("제목")) : controller.note.title)
                     .foregroundStyle(controller.note.title.isEmpty ? .secondary : .primary)
                     .lineLimit(1)
                     .allowsHitTesting(false)
             }
-            .help("더블클릭해서 \(controller.note.isCollapsed ? "펼치기" : "접기")")
+            .help(controller.note.isCollapsed ? L("더블클릭해서 펼치기") : L("더블클릭해서 접기"))
         }
     }
 

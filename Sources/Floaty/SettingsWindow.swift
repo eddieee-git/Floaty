@@ -19,7 +19,7 @@ final class SettingsWindowController {
                 backing: .buffered,
                 defer: false
             )
-            w.title = "Floaty 설정"
+            w.title = L("Floaty 설정")
             w.isReleasedWhenClosed = false
             w.contentView = NSHostingView(rootView: SettingsView(settings: settings))
             w.center()
@@ -41,12 +41,17 @@ struct SettingsView: View {
     }
 
     @ObservedObject var settings: AppSettings
-    @State var tab = Tab.newNotes
+    @State private var tab: Tab
+
+    init(settings: AppSettings, tab: Tab = .newNotes) {
+        self.settings = settings
+        _tab = State(initialValue: tab)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("설정", selection: $tab) {
-                ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            Picker(L("설정"), selection: $tab) {
+                ForEach(Tab.allCases, id: \.self) { Text(L($0.rawValue)).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -67,22 +72,22 @@ struct SettingsView: View {
     private var dates: some View {
         Form {
             Section {
-                Picker("날짜", selection: $settings.dateStyle) {
+                Picker(L("날짜"), selection: $settings.dateStyle) {
                     ForEach(DateStyle.allCases, id: \.self) { Text($0.text(Date(), year: settings.yearStyle)).tag($0) }
                 }
-                Picker("연도", selection: $settings.yearStyle) {
+                Picker(L("연도"), selection: $settings.yearStyle) {
                     ForEach(YearStyle.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                Picker("요일", selection: $settings.weekdayStyle) {
+                Picker(L("요일"), selection: $settings.weekdayStyle) {
                     ForEach(WeekdayStyle.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
-                Picker("시각", selection: $settings.timeStyle) {
+                Picker(L("시각"), selection: $settings.timeStyle) {
                     ForEach(TimeStyle.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                Toggle("오늘 날짜는 시각만 표시", isOn: $settings.timeOnlyToday)
-                LabeledContent("미리 보기", value: settings.dateText(Date(), compact: false))
+                Toggle(L("오늘 날짜는 시각만 표시"), isOn: $settings.timeOnlyToday)
+                LabeledContent(L("미리 보기"), value: settings.dateText(Date(), compact: false))
             }
         }
         .formStyle(.grouped)
@@ -91,7 +96,7 @@ struct SettingsView: View {
     private var sounds: some View {
         Form {
             Section {
-                Toggle("효과음 켜기 (알람 소리는 항상 납니다)", isOn: $settings.soundEffects)
+                Toggle(L("효과음 켜기 (알람 소리는 항상 납니다)"), isOn: $settings.soundEffects)
                 SoundEditor(settings: settings)
             }
         }
@@ -120,26 +125,26 @@ struct SettingsView: View {
         Form {
             Section {
                 Stepper(value: $settings.newNoteWidth, in: AppSettings.widthRange, step: 20) {
-                    LabeledContent("너비", value: "\(Int(settings.newNoteWidth))")
+                    LabeledContent(L("너비"), value: "\(Int(settings.newNoteWidth))")
                 }
                 Stepper(value: $settings.newNoteHeight, in: AppSettings.heightRange, step: 20) {
-                    LabeledContent("높이", value: "\(Int(settings.newNoteHeight))")
+                    LabeledContent(L("높이"), value: "\(Int(settings.newNoteHeight))")
                 }
-                Picker("글씨체", selection: $settings.newNoteFontFamily) {
-                    Text("시스템 글꼴").tag(String?.none)
+                Picker(L("글씨체"), selection: $settings.newNoteFontFamily) {
+                    Text(L("시스템 글꼴")).tag(String?.none)
                     ForEach(FormattingTextView.fontFamilies, id: \.self) { Text($0).tag(String?.some($0)) }
                 }
-                Picker("글자 크기", selection: $settings.newNoteFontSize) {
+                Picker(L("글자 크기"), selection: $settings.newNoteFontSize) {
                     ForEach(FormattingTextView.fontSizes, id: \.self) { Text("\(Int($0))").tag(Double($0)) }
                 }
-                Toggle("항상 위", isOn: $settings.newNotePinned)
-                Picker("색상", selection: $settings.colorMode) {
-                    Text("랜덤 (직전 스티커 색 제외)").tag(AppSettings.ColorMode.random)
-                    Text("고정").tag(AppSettings.ColorMode.fixed)
+                Toggle(L("항상 위"), isOn: $settings.newNotePinned)
+                Picker(L("색상"), selection: $settings.colorMode) {
+                    Text(L("랜덤 (직전 스티커 색 제외)")).tag(AppSettings.ColorMode.random)
+                    Text(L("고정")).tag(AppSettings.ColorMode.fixed)
                 }
                 .pickerStyle(.radioGroup)
                 if settings.colorMode == .fixed {
-                    LabeledContent("고정 색") {
+                    LabeledContent(L("고정 색")) {
                         ColorSwatches(selection: $settings.fixedColorIndex)
                     }
                 }
@@ -151,7 +156,16 @@ struct SettingsView: View {
     private var allNotes: some View {
         Form {
             Section {
-                LabeledContent("투명도") {
+                Picker(L("언어"), selection: $settings.language) {
+                    ForEach(AppLanguage.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                if settings.language != Localization.language {
+                    LabeledContent(L("언어를 바꾸려면 Floaty를 다시 시작해야 합니다.")) {
+                        Button(L("지금 다시 시작")) { Localization.relaunch() }
+                    }
+                    .font(.caption)
+                }
+                LabeledContent(L("투명도")) {
                     HStack {
                         Slider(value: $settings.opacity, in: AppSettings.opacityRange)
                         Text("\(Int((settings.opacity * 100).rounded()))%")
@@ -159,15 +173,15 @@ struct SettingsView: View {
                             .frame(width: 40, alignment: .trailing)
                     }
                 }
-                Toggle("투명도는 새 스티커에만 적용", isOn: $settings.opacityNewNotesOnly)
-                Picker("아래 줄 기본 표시", selection: $settings.footerInfo) {
+                Toggle(L("투명도는 새 스티커에만 적용"), isOn: $settings.opacityNewNotesOnly)
+                Picker(L("아래 줄 기본 표시"), selection: $settings.footerInfo) {
                     ForEach(FooterInfo.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                Toggle("로그인 시 자동 실행", isOn: Binding(get: { settings.launchAtLogin }, set: settings.setLaunchAtLogin))
+                Toggle(L("로그인 시 자동 실행"), isOn: Binding(get: { settings.launchAtLogin }, set: settings.setLaunchAtLogin))
                     .disabled(!settings.canLaunchAtLogin)
-                Toggle("삭제하기 전에 확인", isOn: $settings.confirmTrash)
-                Picker("테마", selection: $settings.theme) {
+                Toggle(L("삭제하기 전에 확인"), isOn: $settings.confirmTrash)
+                Picker(L("테마"), selection: $settings.theme) {
                     ForEach(AppSettings.Theme.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
@@ -188,14 +202,14 @@ private struct SoundEditor: View {
             LabeledContent(effect.title) {
                 HStack(spacing: 8) {
                     Picker(effect.title, selection: selection(for: effect)) {
-                        Text("없음").tag(SoundEffect.silent)
+                        Text(L("없음")).tag(SoundEffect.silent)
                         Divider()
                         ForEach(SoundEffect.systemSounds, id: \.self) { Text($0).tag($0) }
                         Divider()
                         if effect.choice.hasPrefix("/") {
                             Text((effect.choice as NSString).lastPathComponent).tag(effect.choice)
                         }
-                        Text("파일 선택…").tag(Self.chooseFile)
+                        Text(L("파일 선택…")).tag(Self.chooseFile)
                     }
                     .labelsHidden()
                     .frame(width: 170, alignment: .trailing)
@@ -206,13 +220,13 @@ private struct SoundEditor: View {
                     }
                     .buttonStyle(.borderless)
                     .disabled(effect.choice == SoundEffect.silent)
-                    .help("들어 보기")
+                    .help(L("들어 보기"))
                 }
             }
         }
         HStack {
             Spacer()
-            Button("기본값으로") { settings.sounds = [:] }
+            Button(L("기본값으로")) { settings.sounds = [:] }
                 .disabled(settings.sounds.isEmpty)
         }
     }
@@ -235,11 +249,11 @@ private struct SoundEditor: View {
     private func chooseFile(for effect: SoundEffect) {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.audio]
-        panel.message = "\(effect.title) 소리로 쓸 파일을 고르세요."
+        panel.message = L("%@ 소리로 쓸 파일을 고르세요.", effect.title)
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard NSSound(contentsOf: url, byReference: true) != nil else {
             let alert = NSAlert()
-            alert.messageText = "소리 파일을 읽지 못했습니다"
+            alert.messageText = L("소리 파일을 읽지 못했습니다")
             alert.informativeText = url.lastPathComponent
             alert.runModal()
             return
@@ -261,9 +275,9 @@ private struct HotKeyEditor: View {
             LabeledContent(action.title) {
                 HStack(spacing: 8) {
                     if settings.failedHotKeys.contains(action) {
-                        Text("등록하지 못함").font(.caption).foregroundStyle(.red)
+                        Text(L("등록하지 못함")).font(.caption).foregroundStyle(.red)
                     }
-                    Button(recording == action ? "키를 누르세요" : settings.hotKeys[action.rawValue]?.displayText ?? "없음") {
+                    Button(recording == action ? L("키를 누르세요") : settings.hotKeys[action.rawValue]?.displayText ?? L("없음")) {
                         recording == action ? stop() : start(action)
                     }
                     .frame(minWidth: 110)
@@ -274,16 +288,16 @@ private struct HotKeyEditor: View {
                     }
                     .buttonStyle(.borderless)
                     .disabled(settings.hotKeys[action.rawValue] == nil)
-                    .help("단축키 지우기")
+                    .help(L("단축키 지우기"))
                 }
             }
         }
         HStack {
-            Text(message ?? "Esc를 누르면 입력을 취소합니다.")
+            Text(message ?? L("Esc를 누르면 입력을 취소합니다."))
                 .font(.caption)
                 .foregroundStyle(message == nil ? Color.secondary : Color.red)
             Spacer()
-            Button("기본값으로") {
+            Button(L("기본값으로")) {
                 stop()
                 settings.hotKeys = KeyCombo.defaults
             }
@@ -316,11 +330,11 @@ private struct HotKeyEditor: View {
             return
         }
         guard let combo = KeyCombo(event: event) else {
-            message = "⌘, ⌃, ⌥ 중 하나와 함께 누르세요."
+            message = L("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.")
             return
         }
         if let other = HotKeyAction.allCases.first(where: { $0 != action && settings.hotKeys[$0.rawValue] == combo }) {
-            message = "\(other.title)에서 쓰는 단축키입니다."
+            message = L("%@에서 쓰는 단축키입니다.", other.title)
             return
         }
         settings.hotKeys[action.rawValue] = combo
@@ -344,7 +358,7 @@ private struct ColorEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(isDark ? "다크" : "라이트") 테마의 색을 바꿉니다.")
+            Text(L("%@ 테마의 색을 바꿉니다.", isDark ? L("다크") : L("라이트")))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
@@ -359,7 +373,7 @@ private struct ColorEditor: View {
                     }
                 }
             }
-            Button("이 테마의 색을 기본값으로") {
+            Button(L("이 테마의 색을 기본값으로")) {
                 themeKeys.forEach { settings.customColors[$0] = nil }
             }
             .disabled(themeKeys.isEmpty)
@@ -369,8 +383,8 @@ private struct ColorEditor: View {
     @ViewBuilder
     private var captions: some View {
         Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-        Text("제목").font(.caption).frame(width: 52)
-        Text("바탕").font(.caption).frame(width: 52)
+        Text(L("제목")).font(.caption).frame(width: 52)
+        Text(L("바탕")).font(.caption).frame(width: 52)
     }
 
     @ViewBuilder
@@ -378,8 +392,8 @@ private struct ColorEditor: View {
         Text(Palette.colors[index].name)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, index < rows ? 0 : 12)
-        picker(index, .header, "제목")
-        picker(index, .body, "바탕")
+        picker(index, .header, L("제목"))
+        picker(index, .body, L("바탕"))
     }
 
     private func picker(_ index: Int, _ part: Palette.Part, _ label: String) -> some View {

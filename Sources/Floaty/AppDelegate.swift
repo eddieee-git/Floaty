@@ -90,28 +90,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let main = NSMenu()
 
         // 지금 앞에 있는 스티커에 전달된다.
-        let file = NSMenu(title: "파일")
-        file.addItem(withTitle: "찾기…", action: #selector(showSearch), keyEquivalent: "f").target = self
-        file.addItem(withTitle: "새로 만들기", action: #selector(newMemoInManager), keyEquivalent: "n").target = self
-        file.addItem(withTitle: "복제", action: #selector(StickyController.duplicateNote(_:)), keyEquivalent: "d")
-        file.addItem(withTitle: "파일로 저장…", action: #selector(StickyController.saveToFile(_:)), keyEquivalent: "s")
-        file.addItem(withTitle: "인쇄…", action: #selector(StickyController.printNote(_:)), keyEquivalent: "p")
-        main.addItem(withTitle: "파일", action: nil, keyEquivalent: "").submenu = file
+        let file = NSMenu(title: L("파일"))
+        file.addItem(withTitle: L("찾기…"), action: #selector(showSearch), keyEquivalent: "f").target = self
+        file.addItem(withTitle: L("새로 만들기"), action: #selector(newMemoInManager), keyEquivalent: "n").target = self
+        file.addItem(withTitle: L("복제"), action: #selector(StickyController.duplicateNote(_:)), keyEquivalent: "d")
+        file.addItem(withTitle: L("파일로 저장…"), action: #selector(StickyController.saveToFile(_:)), keyEquivalent: "s")
+        file.addItem(withTitle: L("인쇄…"), action: #selector(StickyController.printNote(_:)), keyEquivalent: "p")
+        main.addItem(withTitle: L("파일"), action: nil, keyEquivalent: "").submenu = file
 
-        let edit = NSMenu(title: "편집")
-        edit.addItem(withTitle: "실행 취소", action: Selector(("undo:")), keyEquivalent: "z")
-        edit.addItem(withTitle: "실행 복귀", action: Selector(("redo:")), keyEquivalent: "z")
+        let edit = NSMenu(title: L("편집"))
+        edit.addItem(withTitle: L("실행 취소"), action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: L("실행 복귀"), action: Selector(("redo:")), keyEquivalent: "z")
             .keyEquivalentModifierMask = [.command, .shift]
         edit.addItem(.separator())
-        edit.addItem(withTitle: "잘라내기", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "복사하기", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "붙여넣기", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "서식 없이 붙여넣기", action: #selector(FormattingTextView.pasteWithoutFormatting(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: L("잘라내기"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: L("복사하기"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: L("붙여넣기"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: L("서식 없이 붙여넣기"), action: #selector(FormattingTextView.pasteWithoutFormatting(_:)), keyEquivalent: "v")
             .keyEquivalentModifierMask = [.command, .option, .shift]
-        edit.addItem(withTitle: "모두 선택", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
-        main.addItem(withTitle: "편집", action: nil, keyEquivalent: "").submenu = edit
+        edit.addItem(withTitle: L("모두 선택"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        main.addItem(withTitle: L("편집"), action: nil, keyEquivalent: "").submenu = edit
 
-        main.addItem(withTitle: "서식", action: nil, keyEquivalent: "").submenu =
+        main.addItem(withTitle: L("서식"), action: nil, keyEquivalent: "").submenu =
             FormattingTextView.makeFormatMenu(target: nil)
         NSApp.mainMenu = main
     }
@@ -164,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         addHotKeyItem(.newNote, #selector(newNote))
         addHotKeyItem(.toggleAll, #selector(toggleAll))
         addHotKeyItem(.toggleCollapse, #selector(toggleCollapseAll))
-        menu.addItem(withTitle: "모두 다시 잠그기", action: #selector(relockAll), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("모두 다시 잠그기"), action: #selector(relockAll), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(makeOpacityItem())
         menu.addItem(.separator())
@@ -172,14 +172,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // 숨긴 스티커를 포함한 전체 목록. 열 때마다 다시 만든다.
         let notesMenu = NSMenu()
         notesMenu.delegate = self
-        menu.addItem(withTitle: "스티커", action: nil, keyEquivalent: "").submenu = notesMenu
-        menu.addItem(withTitle: "스티커 관리…", action: #selector(showManager), keyEquivalent: "l").target = self
-        menu.addItem(withTitle: "파일에서 불러오기…", action: #selector(importFiles), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "모두 파일로 저장…", action: #selector(saveAllToFiles), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("스티커"), action: nil, keyEquivalent: "").submenu = notesMenu
+        menu.addItem(withTitle: L("스티커 관리…"), action: #selector(showManager), keyEquivalent: "l").target = self
+        menu.addItem(withTitle: L("파일에서 불러오기…"), action: #selector(importFiles), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("모두 파일로 저장…"), action: #selector(saveAllToFiles), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "설정…", action: #selector(showSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: L("설정…"), action: #selector(showSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Floaty 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: L("Floaty 종료"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.menu = menu
         statusItem = item
     }
@@ -188,7 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.removeAllItems()
         let notes = controllers.values.map(\.note).sorted { $0.createdAt < $1.createdAt }
         guard !notes.isEmpty else {
-            menu.addItem(withTitle: "스티커 없음", action: nil, keyEquivalent: "").isEnabled = false
+            menu.addItem(withTitle: L("스티커 없음"), action: nil, keyEquivalent: "").isEnabled = false
             return
         }
         for note in notes {
@@ -253,11 +253,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.tag = percent
         }
         submenu.addItem(.separator())
-        let newOnly = submenu.addItem(withTitle: "새 스티커에만 적용", action: #selector(toggleOpacityNewOnly), keyEquivalent: "")
+        let newOnly = submenu.addItem(withTitle: L("새 스티커에만 적용"), action: #selector(toggleOpacityNewOnly), keyEquivalent: "")
         newOnly.target = self
         opacityNewOnlyItem = newOnly
         opacityMenu = submenu
-        let item = NSMenuItem(title: "투명도", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: L("투명도"), action: nil, keyEquivalent: "")
         item.submenu = submenu
         return item
     }
@@ -412,7 +412,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         if !failed.isEmpty {
             let alert = NSAlert()
-            alert.messageText = "파일을 읽지 못했습니다"
+            alert.messageText = L("파일을 읽지 못했습니다")
             alert.informativeText = failed.joined(separator: "\n")
             alert.runModal()
         }
@@ -442,12 +442,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !settings.confirmTrash { return true }
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "스티커를 휴지통으로 옮길까요?"
-        alert.informativeText = "메뉴바의 휴지통에서 되살릴 수 있습니다."
-        alert.addButton(withTitle: "휴지통으로 이동")
-        alert.addButton(withTitle: "취소")
+        alert.messageText = L("스티커를 휴지통으로 옮길까요?")
+        alert.informativeText = L("메뉴바의 휴지통에서 되살릴 수 있습니다.")
+        alert.addButton(withTitle: L("휴지통으로 이동"))
+        alert.addButton(withTitle: L("취소"))
         alert.showsSuppressionButton = true
-        alert.suppressionButton?.title = "다시 묻지 않기"
+        alert.suppressionButton?.title = L("다시 묻지 않기")
         let confirmed = alert.runModal() == .alertFirstButtonReturn
         if confirmed, alert.suppressionButton?.state == .on {
             settings.confirmTrash = false

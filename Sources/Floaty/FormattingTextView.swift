@@ -17,33 +17,33 @@ final class FormattingTextView: NSTextView {
 
     /// 메뉴바 앱이라 앱 메뉴가 보이지 않으므로, 같은 항목을 숨은 주 메뉴와 오른쪽 클릭 메뉴에 함께 쓴다.
     static func makeFormatMenu(target: AnyObject?) -> NSMenu {
-        let menu = NSMenu(title: "서식")
+        let menu = NSMenu(title: L("서식"))
         func add(_ title: String, _ action: Selector, _ key: String, _ modifiers: NSEvent.ModifierFlags = .command) {
             let item = menu.addItem(withTitle: title, action: action, keyEquivalent: key)
             item.keyEquivalentModifierMask = modifiers
             item.target = target
         }
-        add("굵게", #selector(toggleBoldface(_:)), "b")
-        add("기울임", #selector(toggleItalics(_:)), "i")
-        add("밑줄", #selector(underline(_:)), "u")
-        add("취소선", #selector(toggleStrikethrough(_:)), "x", [.command, .shift])
-        add("글머리표", #selector(toggleBulletList(_:)), "7")
-        add("서식 지우기", #selector(clearFormatting(_:)), "\\")
+        add(L("굵게"), #selector(toggleBoldface(_:)), "b")
+        add(L("기울임"), #selector(toggleItalics(_:)), "i")
+        add(L("밑줄"), #selector(underline(_:)), "u")
+        add(L("취소선"), #selector(toggleStrikethrough(_:)), "x", [.command, .shift])
+        add(L("글머리표"), #selector(toggleBulletList(_:)), "7")
+        add(L("서식 지우기"), #selector(clearFormatting(_:)), "\\")
         menu.addItem(.separator())
-        add("왼쪽 정렬", #selector(alignLeft(_:)), "{")
-        add("가운데 정렬", #selector(alignCenter(_:)), "|")
-        add("오른쪽 정렬", #selector(alignRight(_:)), "}")
+        add(L("왼쪽 정렬"), #selector(alignLeft(_:)), "{")
+        add(L("가운데 정렬"), #selector(alignCenter(_:)), "|")
+        add(L("오른쪽 정렬"), #selector(alignRight(_:)), "}")
         menu.addItem(.separator())
-        add("글씨체…", #selector(showFontPanel(_:)), "t")
+        add(L("글씨체…"), #selector(showFontPanel(_:)), "t")
         return menu
     }
 
     override func menu(for event: NSEvent) -> NSMenu? {
         let menu = super.menu(for: event) ?? NSMenu()
-        let format = NSMenuItem(title: "서식", action: nil, keyEquivalent: "")
+        let format = NSMenuItem(title: L("서식"), action: nil, keyEquivalent: "")
         format.submenu = Self.makeFormatMenu(target: self)
         menu.insertItem(format, at: 0)
-        let plainPaste = NSMenuItem(title: "서식 없이 붙여넣기", action: #selector(pasteWithoutFormatting(_:)), keyEquivalent: "")
+        let plainPaste = NSMenuItem(title: L("서식 없이 붙여넣기"), action: #selector(pasteWithoutFormatting(_:)), keyEquivalent: "")
         plainPaste.target = self
         menu.insertItem(plainPaste, at: 1)
         menu.insertItem(.separator(), at: 2)
@@ -193,7 +193,7 @@ final class FormattingTextView: NSTextView {
 
     /// 도구 모음에 보여 줄 서식. `textColor`와 `highlight`가 nil이면 기본값이다.
     struct FormatState: Equatable {
-        var fontName = "시스템"
+        var fontName = L("시스템")
         var fontSize = FormattingTextView.defaultFont.pointSize
         var textColor: NSColor?
         var highlight: NSColor?
@@ -212,7 +212,7 @@ final class FormattingTextView: NSTextView {
         let isDefaultColor = color?.usingColorSpace(.sRGB)?.brightnessComponent ?? 0 == 0
         return FormatState(
             // 시스템 글꼴과 한글 대체 글꼴은 이름이 점으로 시작한다.
-            fontName: family.isEmpty || family.hasPrefix(".") ? "시스템" : family,
+            fontName: family.isEmpty || family.hasPrefix(".") ? L("시스템") : family,
             fontSize: font.pointSize,
             textColor: isDefaultColor ? nil : color,
             highlight: attributes[.backgroundColor] as? NSColor

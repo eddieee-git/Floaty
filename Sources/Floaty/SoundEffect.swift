@@ -18,11 +18,11 @@ enum SoundEffect: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .newNote: return "새 스티커"
-        case .collapse: return "최소화"
-        case .expand: return "펼치기"
-        case .trash: return "삭제"
-        case .alarm: return "알람"
+        case .newNote: return L("새 스티커")
+        case .collapse: return L("최소화")
+        case .expand: return L("펼치기")
+        case .trash: return L("삭제")
+        case .alarm: return L("알람")
         }
     }
 

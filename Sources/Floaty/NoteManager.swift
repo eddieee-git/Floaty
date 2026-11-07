@@ -19,7 +19,7 @@ final class NoteManagerWindowController: NSObject, NSWindowDelegate {
                 backing: .buffered,
                 defer: false
             )
-            w.title = "스티커 관리"
+            w.title = L("스티커 관리")
             w.isReleasedWhenClosed = false
             w.minSize = NSSize(width: 640, height: 380)
             // 항상 위 스티커에 가려지지 않게 한다.
@@ -158,7 +158,7 @@ final class NoteManagerModel: ObservableObject {
 
     func deletePermanently(_ ids: Set<UUID>) {
         guard !ids.isEmpty,
-              confirm("스티커 \(ids.count)개를 영구 삭제할까요?", button: "영구 삭제") else { return }
+              confirm(L("스티커 %d개를 영구 삭제할까요?", ids.count), button: L("영구 삭제")) else { return }
         store.remove(ids: ids)
         selection.subtract(ids)
     }
@@ -166,7 +166,7 @@ final class NoteManagerModel: ObservableObject {
     func emptyTrash() {
         let count = store.trashedNotes.count
         guard count > 0,
-              confirm("휴지통의 스티커 \(count)개를 모두 영구 삭제할까요?", button: "휴지통 비우기") else { return }
+              confirm(L("휴지통의 스티커 %d개를 모두 영구 삭제할까요?", count), button: L("휴지통 비우기")) else { return }
         store.emptyTrash()
         selection = []
     }
@@ -174,10 +174,10 @@ final class NoteManagerModel: ObservableObject {
     private func confirm(_ message: String, button: String) -> Bool {
         let alert = NSAlert()
         alert.messageText = message
-        alert.informativeText = "이 작업은 되돌릴 수 없습니다."
+        alert.informativeText = L("이 작업은 되돌릴 수 없습니다.")
         alert.alertStyle = .warning
         alert.addButton(withTitle: button).hasDestructiveAction = true
-        alert.addButton(withTitle: "취소")
+        alert.addButton(withTitle: L("취소"))
         return alert.runModal() == .alertFirstButtonReturn
     }
 }
@@ -282,7 +282,7 @@ struct NoteManagerView: View {
             MultipleSelectionDetail(model: model, ids: selected)
         } else {
             let _ = model.releaseEditor()
-            Text(model.notes.isEmpty ? "메모가 없습니다" : "왼쪽에서 메모를 고르세요")
+            Text(model.notes.isEmpty ? L("메모가 없습니다") : L("왼쪽에서 메모를 고르세요"))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -297,20 +297,20 @@ private struct NoteSidebar: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Picker("보기", selection: $model.filter) {
-                ForEach(NoteFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            Picker(L("보기"), selection: $model.filter) {
+                ForEach(NoteFilter.allCases, id: \.self) { Text(L($0.rawValue)).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
 
             HStack(spacing: 6) {
-                TextField("제목이나 본문 검색", text: $model.query)
+                TextField(L("제목이나 본문 검색"), text: $model.query)
                     .textFieldStyle(.roundedBorder)
                     .focused($searchFocused)
                 Menu {
-                    Picker("정렬", selection: $model.sort) {
+                    Picker(L("정렬"), selection: $model.sort) {
                         ForEach(NoteSort.allCases.filter { $0 != .deleted || model.filter == .trash }, id: \.self) {
-                            Text($0.rawValue).tag($0)
+                            Text(L($0.rawValue)).tag($0)
                         }
                     }
                     .pickerStyle(.inline)
@@ -320,22 +320,22 @@ private struct NoteSidebar: View {
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .fixedSize()
-                .help("정렬")
+                .help(L("정렬"))
                 Button {
                     model.newMemo()
                 } label: {
                     Image(systemName: "square.and.pencil")
                 }
                 .buttonStyle(.borderless)
-                .help("숨긴 스티커로 새로 만들기")
+                .help(L("숨긴 스티커로 새로 만들기"))
             }
 
             if model.isHidingAll && model.filter != .trash {
                 HStack {
                     Image(systemName: "eye.slash")
-                    Text("모두 숨김 중")
+                    Text(L("모두 숨김 중"))
                     Spacer()
-                    Button("다시 보이기") { model.onShowAll() }
+                    Button(L("다시 보이기")) { model.onShowAll() }
                         .controlSize(.small)
                 }
                 .font(.caption)
@@ -356,7 +356,7 @@ private struct NoteSidebar: View {
             }
             .overlay {
                 if notes.isEmpty {
-                    Text(model.query.isEmpty ? (model.filter == .trash ? "휴지통이 비어 있습니다" : "메모가 없습니다") : "찾는 내용이 없습니다")
+                    Text(model.query.isEmpty ? (model.filter == .trash ? L("휴지통이 비어 있습니다") : L("메모가 없습니다")) : L("찾는 내용이 없습니다"))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -364,7 +364,7 @@ private struct NoteSidebar: View {
             if model.filter == .trash {
                 HStack {
                     Spacer()
-                    Button("휴지통 비우기") { model.emptyTrash() }
+                    Button(L("휴지통 비우기")) { model.emptyTrash() }
                         .disabled(model.store.trashedNotes.isEmpty)
                 }
             }
@@ -377,14 +377,14 @@ private struct NoteSidebar: View {
     private func menuItems(for ids: Set<UUID>) -> some View {
         let trashed = ids.compactMap(model.note).contains(where: \.isTrashed)
         if trashed {
-            Button("되살리기") { model.restore(ids) }
-            Button("영구 삭제") { model.deletePermanently(ids) }
+            Button(L("되살리기")) { model.restore(ids) }
+            Button(L("영구 삭제")) { model.deletePermanently(ids) }
         } else if !ids.isEmpty {
-            Button("스티커로 보기") { ids.forEach(model.onReveal) }
-            Button("보이기") { ids.forEach { model.setShown(true, $0) } }
-            Button("숨기기") { ids.forEach { model.setShown(false, $0) } }
+            Button(L("스티커로 보기")) { ids.forEach(model.onReveal) }
+            Button(L("보이기")) { ids.forEach { model.setShown(true, $0) } }
+            Button(L("숨기기")) { ids.forEach { model.setShown(false, $0) } }
             Divider()
-            Button("휴지통으로 이동") { model.trash(ids) }
+            Button(L("휴지통으로 이동")) { model.trash(ids) }
         }
     }
 }
@@ -404,9 +404,9 @@ private struct NoteRow: View {
                 Text(note.displayTitle).lineLimit(1)
                 HStack(spacing: 4) {
                     Text(settings.dateText(date))
-                    if note.isHidden { Image(systemName: "eye.slash").help("숨긴 스티커") }
-                    if note.isLocked { Image(systemName: "lock.fill").help("잠김") }
-                    if note.alarmDate != nil { Image(systemName: "bell.fill").help("알람") }
+                    if note.isHidden { Image(systemName: "eye.slash").help(L("숨긴 스티커")) }
+                    if note.isLocked { Image(systemName: "lock.fill").help(L("잠김")) }
+                    if note.alarmDate != nil { Image(systemName: "bell.fill").help(L("알람")) }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -428,25 +428,25 @@ private struct ActiveNoteDetail: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
-                    TextField("제목 (비우면 본문 첫 줄)", text: $controller.note.title)
+                    TextField(L("제목 (비우면 본문 첫 줄)"), text: $controller.note.title)
                         .textFieldStyle(.plain)
                         .font(.title3.weight(.semibold))
                     ColorMenu(index: $controller.note.colorIndex)
                 }
                 HStack(spacing: 14) {
-                    Toggle("숨기기", isOn: Binding(
+                    Toggle(L("숨기기"), isOn: Binding(
                         get: { controller.note.isHidden },
                         set: { model.setShown(!$0, controller.note.id) }
                     ))
-                    Toggle("항상 위", isOn: $controller.note.isPinned)
+                    Toggle(L("항상 위"), isOn: $controller.note.isPinned)
                     Spacer()
-                    Button("스티커로 보기") { model.onReveal(controller.note.id) }
+                    Button(L("스티커로 보기")) { model.onReveal(controller.note.id) }
                     Button {
                         model.trash([controller.note.id])
                     } label: {
                         Image(systemName: "trash")
                     }
-                    .help("휴지통으로 이동")
+                    .help(L("휴지통으로 이동"))
                 }
                 .toggleStyle(.checkbox)
                 InfoLine(items: info)
@@ -457,8 +457,8 @@ private struct ActiveNoteDetail: View {
             if controller.isContentHidden {
                 VStack(spacing: 10) {
                     Image(systemName: "lock.fill").font(.title)
-                    Text("잠긴 메모입니다")
-                    Button("잠금 해제") { controller.unlock() }
+                    Text(L("잠긴 메모입니다"))
+                    Button(L("잠금 해제")) { controller.unlock() }
                 }
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -474,16 +474,16 @@ private struct ActiveNoteDetail: View {
 
     private var info: [String] {
         let note = controller.note
-        var items = ["만듦 \(settings.dateText(note.createdAt, compact: false))",
-                     "수정 \(settings.dateText(note.modifiedAt, compact: false))"]
+        var items = [L("만듦 %@", settings.dateText(note.createdAt, compact: false)),
+                     L("수정 %@", settings.dateText(note.modifiedAt, compact: false))]
         if !controller.isContentHidden {
-            items.append("\(note.characterCount)자")
+            items.append(L("%d자", note.characterCount))
             if let size = model.store.bodySize(id: note.id) {
                 items.append(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
             }
         }
-        if let alarm = note.alarmDate { items.append("알람 \(settings.dateText(alarm, compact: false))") }
-        if note.isLocked { items.append("잠금") }
+        if let alarm = note.alarmDate { items.append(L("알람 %@", settings.dateText(alarm, compact: false))) }
+        if note.isLocked { items.append(L("잠금")) }
         return items
     }
 }
@@ -501,8 +501,8 @@ private struct TrashedNoteDetail: View {
                         .font(.title3.weight(.semibold))
                         .lineLimit(1)
                     Spacer()
-                    Button("영구 삭제") { model.deletePermanently([note.id]) }
-                    Button("되살리기") { model.restore([note.id]) }
+                    Button(L("영구 삭제")) { model.deletePermanently([note.id]) }
+                    Button(L("되살리기")) { model.restore([note.id]) }
                         .keyboardShortcut(.defaultAction)
                 }
                 InfoLine(items: info)
@@ -510,7 +510,7 @@ private struct TrashedNoteDetail: View {
             .padding(12)
             Divider()
             if note.isLocked {
-                Text("잠긴 메모라 내용을 보여 주지 않습니다.\n되살린 뒤 잠금을 풀어 보세요.")
+                Text(L("잠긴 메모라 내용을 보여 주지 않습니다.\n되살린 뒤 잠금을 풀어 보세요."))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -523,8 +523,8 @@ private struct TrashedNoteDetail: View {
     }
 
     private var info: [String] {
-        var items = ["만듦 \(model.settings.dateText(note.createdAt, compact: false))"]
-        if let deleted = note.deletedAt { items.append("삭제 \(model.settings.dateText(deleted, compact: false))") }
+        var items = [L("만듦 %@", model.settings.dateText(note.createdAt, compact: false))]
+        if let deleted = note.deletedAt { items.append(L("삭제 %@", model.settings.dateText(deleted, compact: false))) }
         if let size = model.store.bodySize(id: note.id) {
             items.append(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
         }
@@ -539,15 +539,15 @@ private struct MultipleSelectionDetail: View {
     var body: some View {
         let trashed = ids.compactMap(model.note).contains(where: \.isTrashed)
         VStack(spacing: 12) {
-            Text("\(ids.count)개 선택됨").font(.title3)
+            Text(L("%d개 선택됨", ids.count)).font(.title3)
             HStack {
                 if trashed {
-                    Button("영구 삭제") { model.deletePermanently(ids) }
-                    Button("되살리기") { model.restore(ids) }
+                    Button(L("영구 삭제")) { model.deletePermanently(ids) }
+                    Button(L("되살리기")) { model.restore(ids) }
                 } else {
-                    Button("숨기기") { ids.forEach { model.setShown(false, $0) } }
-                    Button("보이기") { ids.forEach { model.setShown(true, $0) } }
-                    Button("휴지통으로 이동") { model.trash(ids) }
+                    Button(L("숨기기")) { ids.forEach { model.setShown(false, $0) } }
+                    Button(L("보이기")) { ids.forEach { model.setShown(true, $0) } }
+                    Button(L("휴지통으로 이동")) { model.trash(ids) }
                 }
             }
         }
@@ -593,7 +593,7 @@ private struct ColorMenu: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("색")
+        .help(L("색"))
     }
 }
 

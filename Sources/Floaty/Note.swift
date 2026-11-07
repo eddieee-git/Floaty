@@ -6,8 +6,8 @@ enum FooterInfo: String, Codable, CaseIterable {
 
     var title: String {
         switch self {
-        case .modified: return "수정 시각"
-        case .characters: return "글자수"
+        case .modified: return L("수정 시각")
+        case .characters: return L("글자수")
         }
     }
 }
@@ -49,8 +49,8 @@ struct Note: Codable, Identifiable, Equatable {
     var displayTitle: String {
         let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
         if !trimmedTitle.isEmpty { return trimmedTitle }
-        if isLocked { return "(잠긴 스티커)" }
-        return firstLine ?? "(빈 스티커)"
+        if isLocked { return L("(잠긴 스티커)") }
+        return firstLine ?? L("(빈 스티커)")
     }
 
     var firstLine: String? {

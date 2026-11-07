@@ -7,12 +7,12 @@ enum HotKeyAction: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .newNote: return "새 스티커"
-        case .toggleAll: return "모두 표시/숨기기"
-        case .toggleCollapse: return "모두 최소화/펼치기"
-        case .toggleCurrentCollapse: return "현재 스티커 최소화/펼치기"
-        case .toggleCurrentHidden: return "현재 스티커 숨기기/표시"
-        case .trashCurrent: return "현재 스티커 삭제"
+        case .newNote: return L("새 스티커")
+        case .toggleAll: return L("모두 표시/숨기기")
+        case .toggleCollapse: return L("모두 최소화/펼치기")
+        case .toggleCurrentCollapse: return L("현재 스티커 최소화/펼치기")
+        case .toggleCurrentHidden: return L("현재 스티커 숨기기/표시")
+        case .trashCurrent: return L("현재 스티커 삭제")
         }
     }
 }

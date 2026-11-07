@@ -59,6 +59,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.setCurrentNote(from: event.window)
             return event
         }
+        // 모니터를 빼거나 해상도를 바꾸면 화면 밖으로 나간 스티커를 안으로 들인다.
+        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.controllers.values.forEach { $0.ensureOnScreen() }
+        }
         // 자리를 비우면 풀어 둔 스티커를 다시 가린다.
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(relockAll), name: NSWorkspace.screensDidSleepNotification, object: nil)
@@ -336,6 +340,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             onDuplicate: { [weak self] id in self?.duplicate(id) }
         )
         controllers[note.id] = controller
+        controller.ensureOnScreen()
         if !note.isHidden && !note.isHiddenWithAll { controller.panel.orderFrontRegardless() }
     }
 
@@ -346,10 +351,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         note.title = welcome.title
         note.colorIndex = 0
         note.text = welcome.body.string
-        note.frame.size = CGSize(width: 360, height: 300)
-        if let screen = NSScreen.main?.visibleFrame {
-            note.frame.origin = CGPoint(x: screen.midX - 180, y: screen.midY - 100)
-        }
+        note.frame = placedFrame(size: CGSize(width: 360, height: 300))
         present(note, body: welcome.body)
     }
 
@@ -361,13 +363,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// 설정의 크기·색상을 적용하고, 앞 스티커와 겹치지 않게 조금씩 비껴 놓은 새 스티커.
     private func makeNote() -> Note {
         var note = Note()
-        note.frame.size = CGSize(width: settings.newNoteWidth, height: settings.newNoteHeight)
+        note.frame = placedFrame(size: CGSize(width: settings.newNoteWidth, height: settings.newNoteHeight))
         note.colorIndex = settings.nextColorIndex()
         note.isPinned = settings.newNotePinned
-        let offset = CGFloat(controllers.count % 10) * 24
-        note.frame.origin.x += offset
-        note.frame.origin.y -= offset
         return note
+    }
+
+    /// 마우스가 있는 화면의 가운데쯤에 놓는다. 이어서 만들면 겹치지 않게 조금씩 비껴 놓되 화면을 벗어나지 않는다.
+    private func placedFrame(size: CGSize) -> CGRect {
+        let mouse = NSEvent.mouseLocation
+        let screen = (NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main)?.visibleFrame
+            ?? CGRect(x: 0, y: 0, width: 1280, height: 800)
+        let width = min(size.width, screen.width), height = min(size.height, screen.height)
+        let offset = CGFloat(controllers.count % 10) * 24
+        let x = min(max(screen.midX - width / 2 + offset, screen.minX), screen.maxX - width)
+        let y = min(max(screen.midY - height / 2 - offset, screen.minY), screen.maxY - height)
+        return CGRect(x: x, y: y, width: width, height: height)
     }
 
     /// 저장하고 창을 열어 맨 앞에 놓는다. 본문이 있으면 창을 열기 전에 저장해야 읽어 온다.

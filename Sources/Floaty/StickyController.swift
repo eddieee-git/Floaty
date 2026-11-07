@@ -330,6 +330,36 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         panel.backgroundColor = Palette.color(note.colorIndex)
     }
 
+    /// 제목 줄이 어느 화면에도 충분히 보이지 않으면(모니터를 빼거나 해상도가 바뀐 경우) 가까운 화면 안으로 옮긴다.
+    /// 화면보다 크면 화면에 맞게 줄인다.
+    func ensureOnScreen() {
+        let screens = NSScreen.screens.map(\.visibleFrame)
+        guard !screens.isEmpty else { return }
+        let frame = note.frame
+        let titleBar = NSRect(x: frame.minX, y: frame.maxY - Self.headerHeight, width: frame.width, height: Self.headerHeight)
+        let isReachable = screens.contains { screen in
+            let visible = screen.intersection(titleBar)
+            return visible.width >= 60 && visible.height >= Self.headerHeight / 2
+        }
+        guard !isReachable else { return }
+
+        let center = NSPoint(x: frame.midX, y: frame.midY)
+        let target = screens.min { distance($0, center) < distance($1, center) } ?? screens[0]
+        var moved = frame
+        moved.size.width = min(frame.width, target.width)
+        moved.size.height = min(frame.height, target.height)
+        moved.origin.x = min(max(frame.minX, target.minX), target.maxX - moved.width)
+        moved.origin.y = min(max(frame.maxY, target.minY + moved.height), target.maxY) - moved.height
+        note.frame = moved
+        applyCollapse()
+    }
+
+    private func distance(_ rect: NSRect, _ point: NSPoint) -> CGFloat {
+        let dx = max(rect.minX - point.x, 0, point.x - rect.maxX)
+        let dy = max(rect.minY - point.y, 0, point.y - rect.maxY)
+        return dx * dx + dy * dy
+    }
+
     /// 윗변을 고정한 채 제목 표시줄 높이로 접거나 저장된 크기로 펼친다.
     private func applyCollapse() {
         let expanded = note.frame

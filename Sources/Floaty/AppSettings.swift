@@ -188,21 +188,27 @@ final class AppSettings: ObservableObject {
         defaults.setPersistentDomain(old, forName: id)
     }
 
-    /// 날짜 표기를 직접 고르지 않았으면 언어에 맞는 표기로 바꾼다. 저장하지 않아야 다음에 언어를 바꿀 때도 따라간다.
+    /// 한국어나 영어로 쓰는 날짜·요일·시각 표기는 같은 모양의 새 언어 표기로 바꾼다.
+    /// 숫자만 쓰는 표기, 한자 요일, 24시간제처럼 언어와 상관없는 표기는 그대로 둔다.
+    /// 직접 고르지 않은 값은 저장하지 않아야 다음에 언어를 바꿀 때도 따라간다.
     private func applyLanguageDefaults() {
         let isKorean = language == .korean
-        if defaults.object(forKey: Keys.dateStyle) == nil {
-            dateStyle = isKorean ? .dotted : .englishShort
-            defaults.removeObject(forKey: Keys.dateStyle)
+        func update<T: Equatable>(_ key: String, _ current: T, _ fallback: T, _ mapped: T?, set: (T) -> Void) {
+            let isStored = defaults.object(forKey: key) != nil
+            let next = isStored ? mapped ?? current : fallback
+            guard next != current else { return }
+            set(next)
+            if !isStored { defaults.removeObject(forKey: key) }
         }
-        if defaults.object(forKey: Keys.weekdayStyle) == nil {
-            weekdayStyle = isKorean ? .koreanShort : .englishShort
-            defaults.removeObject(forKey: Keys.weekdayStyle)
-        }
-        if defaults.object(forKey: Keys.timeStyle) == nil {
-            timeStyle = isKorean ? .koreanMeridiem : .englishMeridiem
-            defaults.removeObject(forKey: Keys.timeStyle)
-        }
+        update(Keys.dateStyle, dateStyle, isKorean ? .dotted : .englishShort,
+               isKorean ? (dateStyle == .englishLong || dateStyle == .englishShort ? .korean : nil)
+                        : (dateStyle == .korean ? .englishLong : nil)) { dateStyle = $0 }
+        let weekdayMap: [WeekdayStyle: WeekdayStyle] = isKorean
+            ? [.englishShort: .koreanShort, .englishUpper: .koreanShort, .englishLong: .koreanLong]
+            : [.koreanShort: .englishShort, .koreanLong: .englishLong]
+        update(Keys.weekdayStyle, weekdayStyle, isKorean ? .koreanShort : .englishShort, weekdayMap[weekdayStyle]) { weekdayStyle = $0 }
+        let timeMap: [TimeStyle: TimeStyle] = isKorean ? [.englishMeridiem: .koreanMeridiem] : [.koreanMeridiem: .englishMeridiem]
+        update(Keys.timeStyle, timeStyle, isKorean ? .koreanMeridiem : .englishMeridiem, timeMap[timeStyle]) { timeStyle = $0 }
     }
 
     func setLaunchAtLogin(_ isOn: Bool) {

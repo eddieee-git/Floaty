@@ -59,6 +59,8 @@ struct SettingsView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .fixedSize()
+            // 분할 버튼은 글자가 바뀌어도 다시 그리지 않아서, 언어를 바꾸면 새로 만든다.
+            .id(settings.language)
             .padding(.top, 12)
 
             switch tab {
@@ -128,11 +130,12 @@ struct SettingsView: View {
     private var stickies: some View {
         Form {
             Section(L("새 스티커")) {
-                Stepper(value: $settings.newNoteWidth, in: AppSettings.widthRange, step: 20) {
-                    LabeledContent(L("너비"), value: "\(Int(settings.newNoteWidth))")
+                // 다른 항목처럼 값을 오른쪽에 둔다.
+                LabeledContent(L("너비")) {
+                    SizeStepper(value: $settings.newNoteWidth, range: AppSettings.widthRange)
                 }
-                Stepper(value: $settings.newNoteHeight, in: AppSettings.heightRange, step: 20) {
-                    LabeledContent(L("높이"), value: "\(Int(settings.newNoteHeight))")
+                LabeledContent(L("높이")) {
+                    SizeStepper(value: $settings.newNoteHeight, range: AppSettings.heightRange)
                 }
                 Picker(L("글씨체"), selection: $settings.newNoteFontFamily) {
                     Text(L("시스템 글꼴")).tag(String?.none)
@@ -425,5 +428,18 @@ private struct ColorSwatches: View {
             }
         }
         .padding(3)
+    }
+}
+
+/// 오른쪽 정렬된 숫자와 위아래 버튼. 20씩 바꾼다.
+private struct SizeStepper: View {
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("\(Int(value))").monospacedDigit().foregroundStyle(.primary)
+            Stepper("", value: $value, in: range, step: 20).labelsHidden()
+        }
     }
 }

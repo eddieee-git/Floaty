@@ -32,8 +32,8 @@ final class SettingsWindowController {
 
 struct SettingsView: View {
     enum Tab: String, CaseIterable {
+        case general = "일반"
         case newNotes = "새 스티커"
-        case allNotes = "모든 스티커"
         case dates = "날짜"
         case colors = "색상"
         case sounds = "소리"
@@ -43,7 +43,7 @@ struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @State private var tab: Tab
 
-    init(settings: AppSettings, tab: Tab = .newNotes) {
+    init(settings: AppSettings, tab: Tab = .general) {
         self.settings = settings
         _tab = State(initialValue: tab)
     }
@@ -60,7 +60,7 @@ struct SettingsView: View {
 
             switch tab {
             case .newNotes: newNotes
-            case .allNotes: allNotes
+            case .general: general
             case .dates: dates
             case .colors: colors
             case .sounds: sounds
@@ -153,7 +153,8 @@ struct SettingsView: View {
         .formStyle(.grouped)
     }
 
-    private var allNotes: some View {
+    /// 앱 전체에 걸리는 설정. 위는 앱, 아래는 모든 스티커에 공통인 값이다.
+    private var general: some View {
         Form {
             Section {
                 Picker(L("언어"), selection: $settings.language) {
@@ -165,6 +166,15 @@ struct SettingsView: View {
                     }
                     .font(.caption)
                 }
+                Picker(L("테마"), selection: $settings.theme) {
+                    ForEach(AppSettings.Theme.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Toggle(L("로그인 시 자동 실행"), isOn: Binding(get: { settings.launchAtLogin }, set: settings.setLaunchAtLogin))
+                    .disabled(!settings.canLaunchAtLogin)
+                Toggle(L("삭제하기 전에 확인"), isOn: $settings.confirmTrash)
+            }
+            Section(L("모든 스티커")) {
                 LabeledContent(L("투명도")) {
                     HStack {
                         Slider(value: $settings.opacity, in: AppSettings.opacityRange)
@@ -176,13 +186,6 @@ struct SettingsView: View {
                 Toggle(L("투명도는 새 스티커에만 적용"), isOn: $settings.opacityNewNotesOnly)
                 Picker(L("아래 줄 기본 표시"), selection: $settings.footerInfo) {
                     ForEach(FooterInfo.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                Toggle(L("로그인 시 자동 실행"), isOn: Binding(get: { settings.launchAtLogin }, set: settings.setLaunchAtLogin))
-                    .disabled(!settings.canLaunchAtLogin)
-                Toggle(L("삭제하기 전에 확인"), isOn: $settings.confirmTrash)
-                Picker(L("테마"), selection: $settings.theme) {
-                    ForEach(AppSettings.Theme.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
             }

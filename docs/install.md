@@ -47,7 +47,7 @@ xattr -dr com.apple.quarantine /Applications/Floaty.app
 
 ## 로그인할 때 자동으로 실행하기
 
-메뉴바 아이콘 → **설정…** → **모든 스티커** 탭에서 **로그인 시 자동 실행**을 켭니다. Floaty를 Applications 폴더에 둔 뒤에 켜세요.
+메뉴바 아이콘 → **설정…** → **일반** 탭에서 **로그인 시 자동 실행**을 켭니다. Floaty를 Applications 폴더에 둔 뒤에 켜세요.
 
 ## 업데이트
 

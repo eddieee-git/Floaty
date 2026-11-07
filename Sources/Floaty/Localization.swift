@@ -179,6 +179,7 @@ enum Localization {
         // 설정 창
         "Floaty 설정": "Floaty Settings",
         "모든 스티커": "All Stickies",
+        "일반": "General",
         "날짜": "Date",
         "색상": "Colors",
         "소리": "Sounds",

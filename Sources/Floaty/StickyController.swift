@@ -18,6 +18,12 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
             guard note != oldValue else { return }
             if note.title != oldValue.title { note.modifiedAt = Date() }
             onChange(note)
+            // 잠그면 본문 파일을 바로 암호화하고, 잠금을 없애면 평문으로 되돌린다.
+            if note.isLocked != oldValue.isLocked {
+                pendingBodySave?.cancel()
+                pendingBodySave = nil
+                onBodyChange(textView.attributedString())
+            }
             applyWindowState()
             if note.isCollapsed != oldValue.isCollapsed { applyCollapse() }
         }

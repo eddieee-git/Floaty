@@ -3,10 +3,17 @@ import AppKit
 /// 스티커 목록을 ~/Library/Application Support/Floaty/notes.json 에 저장한다.
 /// 휴지통에 있는 스티커도 `deletedAt`이 설정된 채로 같은 파일에 남는다.
 /// 서식·이미지가 든 본문은 스티커마다 bodies/<id>.rtfd-flat 에 따로 저장한다(입력할 때마다 목록 전체를 다시 쓰지 않도록).
+/// 잠긴 메모는 본문 파일을 암호화하고, 목록 파일에는 본문 글자를 남기지 않는다.
 final class NoteStore: ObservableObject {
+    /// 목록 파일은 입력이 멈춘 뒤 이만큼 지나 저장한다. 글자마다 파일 전체를 다시 쓰지 않도록 모은다.
+    private static let saveDelay: TimeInterval = 0.5
+
     @Published private(set) var notes: [Note] = []
     private let url: URL
     private let bodiesDir: URL
+    private var pendingSave: DispatchWorkItem?
+    /// 암호를 풀지 못한 본문. 빈 내용으로 덮어쓰지 않도록 이 본문은 저장하지 않는다.
+    private(set) var unreadableBodies = Set<UUID>()
     /// 저장 파일이 아직 없다. 스티커를 모두 지운 뒤에는 파일이 남으므로 처음 설치한 때와 구분된다.
     let isFirstRun: Bool
 
@@ -33,6 +40,24 @@ final class NoteStore: ObservableObject {
         } else {
             notes.append(note)
         }
+        scheduleSave()
+    }
+
+    private func scheduleSave() {
+        pendingSave?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.pendingSave = nil
+            self?.save()
+        }
+        pendingSave = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.saveDelay, execute: work)
+    }
+
+    /// 대기 중인 목록 저장을 바로 한다. 앱을 끌 때 부른다.
+    func flush() {
+        guard let pending = pendingSave else { return }
+        pending.cancel()
+        pendingSave = nil
         save()
     }
 
@@ -70,10 +95,37 @@ final class NoteStore: ObservableObject {
     // MARK: 본문 (RTFD)
 
     /// 저장된 본문이 없으면(이전 버전의 일반 텍스트 스티커) nil.
+    /// 암호를 풀지 못하면 안내 문구를 돌려주고, 그 본문은 이후 저장하지 않는다.
     func loadBody(id: UUID) -> NSAttributedString? {
-        guard let data = try? Data(contentsOf: bodyURL(id)),
-              let body = NSAttributedString(rtfd: data, documentAttributes: nil) else { return nil }
+        guard var data = try? Data(contentsOf: bodyURL(id)) else { return nil }
+        if NoteCrypto.isEncrypted(data) {
+            do {
+                data = try NoteCrypto.decrypt(data)
+            } catch {
+                unreadableBodies.insert(id)
+                return NSAttributedString(string: L("이 메모의 암호를 풀 수 없습니다. 다른 Mac에서 옮겨 왔다면 원래 Mac에서 잠금을 없앤 뒤 옮겨 주세요."),
+                                          attributes: FormattingTextView.defaultAttributes)
+            }
+        }
+        guard let body = NSAttributedString(rtfd: data, documentAttributes: nil) else { return nil }
         return Self.restoringSystemFont(body)
+    }
+
+    /// 본문 파일이 암호화되어 있는지.
+    func isBodyEncrypted(id: UUID) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: bodyURL(id)) else { return false }
+        defer { try? handle.close() }
+        return NoteCrypto.isEncrypted(handle.readData(ofLength: 8))
+    }
+
+    /// 잠금 상태와 파일 상태를 맞춘다. 잠금 기능이 암호화하기 전에 잠근 메모는 여기서 암호화되고,
+    /// 목록 파일에 남아 있던 본문 글자도 다음 저장에서 빠진다.
+    func reconcileEncryption() {
+        for note in notes where note.isLocked != isBodyEncrypted(id: note.id) && !unreadableBodies.contains(note.id) {
+            guard FileManager.default.fileExists(atPath: bodyURL(note.id).path), let body = loadBody(id: note.id) else { continue }
+            saveBody(body, id: note.id)
+        }
+        save()
     }
 
     /// 시스템 글꼴은 RTFD에 이름이 제대로 남지 않아 다시 읽으면 Helvetica Neue가 된다.
@@ -94,10 +146,16 @@ final class NoteStore: ObservableObject {
         return result
     }
 
+    /// 잠긴 메모는 암호화해서 쓴다. 암호화하지 못하면 평문으로 떨어뜨리지 않고 저장을 건너뛴다.
     func saveBody(_ body: NSAttributedString, id: UUID) {
+        guard !unreadableBodies.contains(id) else { return }
         let range = NSRange(location: 0, length: body.length)
-        guard let data = body.rtfd(from: range, documentAttributes: [.documentType: NSAttributedString.DocumentType.rtfd])
+        guard var data = body.rtfd(from: range, documentAttributes: [.documentType: NSAttributedString.DocumentType.rtfd])
         else { return }
+        if notes.first(where: { $0.id == id })?.isLocked == true {
+            guard let sealed = try? NoteCrypto.encrypt(data) else { return }
+            data = sealed
+        }
         try? data.write(to: bodyURL(id), options: .atomic)
     }
 
@@ -114,8 +172,16 @@ final class NoteStore: ObservableObject {
         bodiesDir.appendingPathComponent("\(id.uuidString).rtfd-flat")
     }
 
+    /// 잠긴 메모의 본문 글자는 목록 파일에 남기지 않는다(메모리에는 있다).
     private func save() {
-        guard let data = try? JSONEncoder().encode(notes) else { return }
+        pendingSave?.cancel()
+        pendingSave = nil
+        let stored = notes.map { note -> Note in
+            var note = note
+            if note.isLocked { note.text = "" }
+            return note
+        }
+        guard let data = try? JSONEncoder().encode(stored) else { return }
         try? data.write(to: url, options: .atomic)
     }
 }

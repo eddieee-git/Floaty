@@ -72,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         RunLoop.main.add(timer, forMode: .common)
         alarmTimer = timer
         // 메뉴바 앱이라 처음 설치했을 때만 안내 스티커로 실행된 것을 알린다. 그 뒤로는 있던 그대로 띄운다.
+        store.reconcileEncryption()
         if store.isFirstRun {
             showWelcome()
         } else {
@@ -81,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         controllers.values.forEach { $0.flushBody() }
+        store.flush()
     }
 
     /// 메뉴바 앱이라 화면에 보이지 않지만, ⌘C·⌘V·⌘Z와 서식 단축키는 주 메뉴를 거쳐 전달되므로 필요하다.
@@ -320,9 +322,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             note.opacity = settings.opacity
             store.upsert(note)
         }
+        let body = store.loadBody(id: note.id)
+        // 잠긴 메모는 목록 파일에 본문 글자가 없으므로, 글자수·검색에 쓰도록 메모리에서만 채운다.
+        if note.isLocked, let body { note.text = body.string }
         let controller = StickyController(
             note: note,
-            body: store.loadBody(id: note.id),
+            body: body,
             settings: settings,
             onChange: { [weak self] in self?.store.upsert($0) },
             onBodyChange: { [weak self] in self?.store.saveBody($0, id: note.id) },

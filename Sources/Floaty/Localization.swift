@@ -227,6 +227,7 @@ enum Localization {
         "삭제": "Delete",
 
         // 스티커
+        "이 메모의 암호를 풀 수 없습니다. 다른 Mac에서 옮겨 왔다면 원래 Mac에서 잠금을 없앤 뒤 옮겨 주세요.": "This note can't be decrypted. If you moved it from another Mac, remove the lock there first, then move it again.",
         "잠긴 스티커를 열려고 합니다": "unlock a locked sticky",
         "알람 설정": "Set Alarm",
         "지정한 시각에 이 스티커만 앞으로 나타납니다.": "This sticky will come to the front at the chosen time.",

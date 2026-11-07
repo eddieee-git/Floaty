@@ -70,10 +70,13 @@ final class NoteManagerModel: ObservableObject {
             } else if sort == .deleted {
                 sort = .modified
             }
+            keepSelectionVisible()
         }
     }
     @Published var sort: NoteSort = .modified
-    @Published var query = ""
+    @Published var query = "" {
+        didSet { keepSelectionVisible() }
+    }
     @Published var selection = Set<UUID>()
     @Published var searchFocusRequest = 0
 
@@ -143,7 +146,23 @@ final class NoteManagerModel: ObservableObject {
         if filter == .shown || filter == .trash { filter = .all }
         query = ""
         focusOnOpen = id
-        selection = [id]
+        select([id])
+    }
+
+    /// 보기나 검색어 때문에 목록에서 빠진 메모는 선택을 푼다. 보이지 않는 줄이 선택된 채로 다시 나타나면
+    /// 목록이 그리는 도중에 선택이 바뀌어 macOS가 경고한다.
+    private func keepSelectionVisible() {
+        DispatchQueue.main.async {
+            let visible = Set(self.notes.map(\.id))
+            let kept = self.selection.intersection(visible)
+            if kept != self.selection { self.selection = kept }
+        }
+    }
+
+    /// 목록 줄이 바뀌는 것과 같은 순간에 선택을 바꾸면 목록이 그리는 도중에 다시 불려 macOS가 경고한다.
+    /// 줄이 먼저 바뀌게 하고 선택은 다음 차례에 바꾼다.
+    private func select(_ ids: Set<UUID>) {
+        DispatchQueue.main.async { self.selection = ids }
     }
 
     func setShown(_ shown: Bool, _ id: UUID) {
@@ -157,14 +176,14 @@ final class NoteManagerModel: ObservableObject {
 
     func restore(_ ids: Set<UUID>) {
         ids.forEach(onRestore)
-        selection.subtract(ids)
+        select(selection.subtracting(ids))
     }
 
     func deletePermanently(_ ids: Set<UUID>) {
         guard !ids.isEmpty,
               confirm(L("스티커 %d개를 영구 삭제할까요?", ids.count), button: L("영구 삭제")) else { return }
         store.remove(ids: ids)
-        selection.subtract(ids)
+        select(selection.subtracting(ids))
     }
 
     func emptyTrash() {
@@ -172,7 +191,7 @@ final class NoteManagerModel: ObservableObject {
         guard count > 0,
               confirm(L("휴지통의 스티커 %d개를 모두 영구 삭제할까요?", count), button: L("휴지통 비우기")) else { return }
         store.emptyTrash()
-        selection = []
+        select([])
     }
 
     private func confirm(_ message: String, button: String) -> Bool {

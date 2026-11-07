@@ -12,8 +12,8 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp .build/arm64-apple-macosx/release/Floaty "$app/Contents/MacOS/Floaty"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 cp Resources/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
-# 개발자 인증서가 없으므로 이 Mac에서 실행할 수 있게 임시 서명만 한다.
-codesign --force --sign - "$app"
+# 개발자 인증서가 없으므로 임시 서명만 한다. 강화 런타임(--options runtime)을 켜서 실행 중인 앱에 다른 코드를 끼워 넣지 못하게 한다.
+codesign --force --sign - --options runtime "$app"
 
 # 내려받은 쪽에서 응용 프로그램 폴더로 끌어다 놓을 수 있게 바로가기를 함께 넣는다.
 staging=build/dmg

@@ -12,6 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// 숨기거나 삭제할 때 시스템이 다른 스티커로 넘기는 포커스를 현재 스티커 변경으로 치지 않으려는 표시.
     private var ignoresFocusHandover = false
     private var hotKeySubscription: AnyCancellable?
+    private var hidingAllSubscription: AnyCancellable?
+    private let undoToast = UndoToast()
     private var hotKeyItems: [HotKeyAction: NSMenuItem] = [:]
     private lazy var managerWindow: NoteManagerWindowController = {
         let model = NoteManagerModel(store: store, settings: settings)
@@ -47,6 +49,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if !self.settings.opacityNewNotesOnly {
                 self.controllers.values.forEach { $0.note.opacity = value }
             }
+        }
+        // 모두 숨긴 동안에는 메뉴바 아이콘을 흐리게 해서 앱이 꺼진 것이 아님을 알린다.
+        hidingAllSubscription = store.$notes.receive(on: DispatchQueue.main).sink { [weak self] notes in
+            let hidingAll = notes.contains { !$0.isTrashed && $0.isHiddenWithAll && !$0.isHidden }
+            self?.statusItem?.button?.appearsDisabled = hidingAll
+            self?.statusItem?.button?.toolTip = hidingAll ? L("모두 숨김 중") : nil
         }
         hotKeySubscription = settings.$hotKeys.combineLatest(settings.$isRecordingHotKey).sink { [weak self] combos, isRecording in
             self?.registerHotKeys(isRecording ? [:] : combos)
@@ -440,14 +448,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NoteFile.runSaveAllPanel(items, lockedCount: controllers.count - items.count)
     }
 
+    /// 빈 스티커는 묻지 않고 지운다. 내용이 있으면 확인한 뒤 지우고, 잠깐 "되돌리기"를 띄운다.
     private func moveToTrash(_ id: UUID) {
-        guard confirmMoveToTrash(), let controller = controllers.removeValue(forKey: id) else { return }
+        guard let controller = controllers[id] else { return }
+        let isEmpty = controller.note.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && controller.textView.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard isEmpty || confirmMoveToTrash() else { return }
+        controllers.removeValue(forKey: id)
+        let frame = controller.panel.frame
+        let wasVisible = controller.panel.isVisible
         SoundEffect.trash.play()
         // 단축키를 연달아 눌러도 포커스를 넘겨받은 다른 스티커까지 지우지 않게 한다.
         ignoresFocusHandover = true
         controller.close()
         DispatchQueue.main.async { self.ignoresFocusHandover = false }
         store.trash(id: id)
+        if !isEmpty && wasVisible {
+            undoToast.show(message: L("휴지통으로 옮겼습니다"), near: frame) { [weak self] in
+                self?.restoreFromTrash(id)
+                self?.controllers[id]?.panel.makeKeyAndOrderFront(nil)
+            }
+        }
     }
 
     /// 설정에서 삭제 확인을 껐으면("다시 묻지 않기" 포함) 묻지 않고 통과한다.

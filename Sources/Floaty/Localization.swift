@@ -69,6 +69,8 @@ enum Localization {
         "휴지통으로 이동": "Move to Trash",
         "취소": "Cancel",
         "다시 묻지 않기": "Don't ask again",
+        "휴지통으로 옮겼습니다": "Moved to Trash",
+        "되돌리기": "Undo",
 
         // 설정 값
         "라이트": "Light",

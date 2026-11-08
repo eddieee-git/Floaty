@@ -548,6 +548,7 @@ struct FormatBar: View {
         Divider().frame(height: 12)
         button("list.bullet", L("글머리표 ⌘7")) { $0.toggleBulletList(nil) }
         button("checklist", L("체크리스트 ⌘⇧L")) { $0.toggleChecklist(nil) }
+        Divider().frame(height: 12)
         button("text.alignleft", L("왼쪽 정렬")) { $0.alignLeft(nil) }
         button("text.aligncenter", L("가운데 정렬")) { $0.alignCenter(nil) }
         button("text.alignright", L("오른쪽 정렬")) { $0.alignRight(nil) }

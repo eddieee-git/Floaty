@@ -174,6 +174,10 @@ final class NoteManagerModel: ObservableObject {
         ids.forEach(onTrash)
     }
 
+    func setColor(_ index: Int, _ ids: Set<UUID>) {
+        ids.compactMap(controller).forEach { $0.note.colorIndex = index }
+    }
+
     func restore(_ ids: Set<UUID>) {
         ids.forEach(onRestore)
         select(selection.subtracting(ids))
@@ -374,6 +378,9 @@ private struct NoteSidebar: View {
                 NoteRow(note: note, date: model.filter == .trash ? note.deletedAt ?? note.modifiedAt : note.modifiedAt,
                         settings: settings)
             }
+            // 검색어나 보기가 바뀌면 줄을 하나씩 고치지 않고 목록을 새로 만든다. 줄 수가 크게 바뀔 때
+            // SwiftUI 목록이 표를 고치는 도중에 다시 불려 macOS가 경고하는 것을 피한다. 선택은 모델에 있어 그대로 남는다.
+            .id("\(model.filter.rawValue)|\(model.query)")
             .contextMenu(forSelectionType: UUID.self) { ids in
                 menuItems(for: ids)
             } primaryAction: { ids in
@@ -550,6 +557,10 @@ private struct TrashedNoteDetail: View {
     private var info: [String] {
         var items = [L("만듦 %@", model.settings.dateText(note.createdAt, compact: false))]
         if let deleted = note.deletedAt { items.append(L("삭제 %@", model.settings.dateText(deleted, compact: false))) }
+        if model.settings.autoEmptyTrash, let purge = NoteStore.purgeDate(for: note) {
+            let days = max(Calendar.current.dateComponents([.day], from: Date(), to: purge).day ?? 0, 0)
+            items.append(days > 0 ? L("%d일 뒤 자동 삭제", days) : L("곧 자동 삭제"))
+        }
         if let size = model.store.bodySize(id: note.id) {
             items.append(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
         }
@@ -573,6 +584,7 @@ private struct MultipleSelectionDetail: View {
                     Button(L("숨기기")) { ids.forEach { model.setShown(false, $0) } }
                     Button(L("보이기")) { ids.forEach { model.setShown(true, $0) } }
                     Button(L("휴지통으로 이동")) { model.trash(ids) }
+                    colorMenu
                 }
             }
         }
@@ -590,6 +602,28 @@ private struct InfoLine: View {
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .truncationMode(.tail)
+    }
+}
+
+extension MultipleSelectionDetail {
+    /// 고른 스티커의 색을 한 번에 바꾼다. 모두 같은 색이면 그 색에 체크한다.
+    var colorMenu: some View {
+        let colors = Set(ids.compactMap(model.note).map(\.colorIndex))
+        return Menu(L("색")) {
+            ForEach(Palette.colors.indices, id: \.self) { i in
+                Button {
+                    model.setColor(i, ids)
+                } label: {
+                    if colors == [i] {
+                        Label(L(Palette.colors[i].name), systemImage: "checkmark")
+                    } else {
+                        Text(L(Palette.colors[i].name))
+                    }
+                }
+            }
+        }
+        .fixedSize()
+        .help(L("고른 스티커의 색을 한 번에 바꿉니다"))
     }
 }
 

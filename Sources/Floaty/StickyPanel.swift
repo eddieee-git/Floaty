@@ -31,7 +31,11 @@ final class StickyPanel: NSPanel {
     /// 스티커 어디를 누르든 불린다. 버튼·메뉴가 먼저 처리한 뒤에 불린다.
     var onClick: (() -> Void)?
 
+    /// 이번 클릭 전에 이미 앞에 있었는지. 제목을 눌러 앞으로 가져온 것과 편집하려고 누른 것을 구분한다.
+    private(set) var wasKeyBeforeMouseDown = false
+
     override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown { wasKeyBeforeMouseDown = isKeyWindow }
         super.sendEvent(event)
         if event.type == .leftMouseDown || event.type == .rightMouseDown { onClick?() }
     }

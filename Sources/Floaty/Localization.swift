@@ -102,6 +102,14 @@ enum Localization {
         "체크리스트 ⌘⇧L": "Checklist ⌘⇧L",
         "체크리스트": "Checklist",
         "체크": "Check",
+        "%d분 뒤에 다시 알림": "Remind again in %d minutes",
+        "이 스티커에서 찾기…": "Find in Sticky…",
+        "다음 찾기": "Find Next",
+        "이전 찾기": "Find Previous",
+        "휴지통에서 %d일 지난 스티커 자동으로 지우기": "Delete stickies from Trash after %d days",
+        "%d일 뒤 자동 삭제": "Deleted automatically in %d days",
+        "곧 자동 삭제": "Deleted automatically soon",
+        "고른 스티커의 색을 한 번에 바꿉니다": "Change the color of all selected stickies",
         "다른 글씨체…": "Other Fonts…",
         "글씨체 ⌘T": "Font ⌘T",
         "글자색": "Text Color",
@@ -262,8 +270,8 @@ enum Localization {
         "%d분 후": "In %d Minutes",
         "%d시간 후": "In %d Hour",
         "날짜와 시각 지정…": "Choose Date and Time…",
-        "더블클릭해서 펼치기": "Double-click to expand",
-        "더블클릭해서 접기": "Double-click to collapse",
+        "클릭해서 제목 변경 · 더블클릭해서 펼치기": "Click to rename · Double-click to expand",
+        "클릭해서 제목 변경 · 더블클릭해서 접기": "Click to rename · Double-click to collapse",
     ]
 }
 

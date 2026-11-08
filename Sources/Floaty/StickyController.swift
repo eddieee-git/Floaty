@@ -8,6 +8,8 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
     static let headerHeight: CGFloat = 28
     /// 알람 메뉴의 "N분 후" 항목(분).
     static let alarmDelays = [5, 10, 15, 30, 60]
+    /// 울리는 알람의 "다시 알림" 간격(분).
+    static let snoozeMinutes = 5
     private static let alarmRings = 3
     private static let alarmRingInterval: TimeInterval = 0.6
     /// 본문은 입력이 멈춘 뒤 이만큼 지나 저장한다.
@@ -83,6 +85,7 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         // 본문 파일이 없으면 이전 버전의 일반 텍스트를 옮겨 온다.
         let initialBody = body ?? NSAttributedString(string: note.text, attributes: FormattingTextView.defaultAttributes)
         textView.textStorage?.setAttributedString(initialBody)
+        textView.detectExistingLinks()
         textView.delegate = self
         updateFormatState()
 
@@ -117,6 +120,11 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         textView.minSize = .zero
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
         textView.textContainer?.widthTracksTextView = true
+        // 입력하거나 붙여 넣은 주소를 누를 수 있는 링크로 바꾼다.
+        textView.isAutomaticLinkDetectionEnabled = true
+        // ⌘⇧F로 본문 위에 찾기 막대를 연다.
+        textView.usesFindBar = true
+        textView.isIncrementalSearchingEnabled = true
 
         scrollView.documentView = textView
         scrollView.drawsBackground = false
@@ -247,6 +255,10 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
     func dismissAlarm() {
         isAlarmRinging = false
         note.alarmDate = nil
+    }
+
+    func snoozeAlarm() {
+        setAlarm(Date().addingTimeInterval(TimeInterval(Self.snoozeMinutes * 60)))
     }
 
     /// 새 시각을 걸면 울리던 알람은 멈춘다(다시 알림).
@@ -478,26 +490,44 @@ private struct ClickCatcher: NSViewRepresentable {
 
 /// 제목 영역. 끌면 창이 움직이고, 더블클릭하면 스티커를 접거나 펼친다.
 private struct TitleDragArea: NSViewRepresentable {
+    let onClick: () -> Void
     let onDoubleClick: () -> Void
 
+    /// 끌면 창을 옮기고, 더블클릭하면 접는다. 이미 앞에 있던 스티커의 제목을 끌지 않고 한 번 누르면
+    /// 더블클릭이 아닌 것을 확인한 뒤 제목 편집을 시작한다.
     final class DragView: NSView {
+        var onClick: () -> Void = {}
         var onDoubleClick: () -> Void = {}
+        private var pendingClick: DispatchWorkItem?
+
         override func mouseDown(with event: NSEvent) {
+            pendingClick?.cancel()
+            pendingClick = nil
             if event.clickCount == 2 {
                 onDoubleClick()
-            } else {
-                window?.performDrag(with: event)
+                return
             }
+            let wasFront = (window as? StickyPanel)?.wasKeyBeforeMouseDown == true
+            let origin = window?.frame.origin
+            window?.performDrag(with: event)
+            guard event.clickCount == 1, wasFront else { return }
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.window?.frame.origin == origin else { return }
+                self.onClick()
+            }
+            pendingClick = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + NSEvent.doubleClickInterval, execute: work)
         }
     }
 
     func makeNSView(context: Context) -> DragView {
         let view = DragView()
-        view.onDoubleClick = onDoubleClick
+        updateNSView(view, context: context)
         return view
     }
 
     func updateNSView(_ nsView: DragView, context: Context) {
+        nsView.onClick = onClick
         nsView.onDoubleClick = onDoubleClick
     }
 }
@@ -787,6 +817,10 @@ struct StickyView: View {
                                 .lineLimit(1)
                         }
                         Spacer()
+                        if controller.isAlarmRinging {
+                            Button(L("%d분 후", StickyController.snoozeMinutes)) { controller.snoozeAlarm() }
+                                .help(L("%d분 뒤에 다시 알림", StickyController.snoozeMinutes))
+                        }
                         Button(controller.isAlarmRinging ? L("알람 확인") : L("해제")) { controller.dismissAlarm() }
                     }
                     .font(.system(size: 12))
@@ -930,13 +964,14 @@ struct StickyView: View {
                 }
         } else {
             ZStack(alignment: .leading) {
-                TitleDragArea(onDoubleClick: toggleCollapse)
+                TitleDragArea(onClick: startEditingTitle, onDoubleClick: toggleCollapse)
                 Text(controller.note.title.isEmpty ? (controller.note.previewLine ?? L("제목")) : controller.note.title)
                     .foregroundStyle(controller.note.title.isEmpty ? .secondary : .primary)
                     .lineLimit(1)
                     .allowsHitTesting(false)
             }
-            .help(controller.note.isCollapsed ? L("더블클릭해서 펼치기") : L("더블클릭해서 접기"))
+            .help(controller.note.isCollapsed ? L("클릭해서 제목 변경 · 더블클릭해서 펼치기")
+                                              : L("클릭해서 제목 변경 · 더블클릭해서 접기"))
         }
     }
 

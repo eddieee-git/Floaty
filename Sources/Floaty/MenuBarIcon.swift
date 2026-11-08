@@ -3,11 +3,17 @@ import AppKit
 /// 메뉴바 아이콘. 접힌 모서리가 있는 메모지에 압정을 꽂은 모양이다.
 /// 템플릿 이미지라 메뉴바의 밝기에 맞춰 색이 바뀐다.
 enum MenuBarIcon {
-    static func make() -> NSImage {
+    /// `hidingAll`이면 메모지 테두리를 점선으로 그려 스티커가 모두 숨어 있음을 알린다.
+    /// 아이콘 전체를 흐리게 하면 앱이 꺼진 것처럼 보여서 모양으로 구분한다.
+    static func make(hidingAll: Bool = false) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
             let outline = note
             outline.lineWidth = 1.5
             outline.lineJoinStyle = .round
+            if hidingAll {
+                outline.lineCapStyle = .round
+                outline.setLineDash([2, 2.4], count: 2, phase: 0)
+            }
             outline.stroke()
             let pin = pinPath
             // 압정 둘레를 비워 메모지와 겹쳐도 모양이 구분되게 한다.

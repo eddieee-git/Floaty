@@ -189,6 +189,7 @@ struct SettingsView: View {
                 Toggle(L("로그인 시 자동 실행"), isOn: Binding(get: { settings.launchAtLogin }, set: settings.setLaunchAtLogin))
                     .disabled(!settings.canLaunchAtLogin)
                 Toggle(L("삭제하기 전에 확인"), isOn: $settings.confirmTrash)
+                Toggle(L("휴지통에서 %d일 지난 스티커 자동으로 지우기", NoteStore.trashRetentionDays), isOn: $settings.autoEmptyTrash)
             }
         }
         .formStyle(.grouped)

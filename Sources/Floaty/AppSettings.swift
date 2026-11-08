@@ -58,6 +58,7 @@ final class AppSettings: ObservableObject {
         static let sounds = "sounds"
         // 삭제 확인 대화상자의 "다시 묻지 않기"가 이 키에 저장된다.
         static let skipTrashConfirmation = "skipTrashConfirmation"
+        static let autoEmptyTrash = "autoEmptyTrash"
     }
 
     private let defaults = UserDefaults.standard
@@ -138,6 +139,8 @@ final class AppSettings: ObservableObject {
     /// `swift run`으로 실행하면 번들이 없어 로그인 항목에 등록할 수 없다.
     var canLaunchAtLogin: Bool { Bundle.main.bundleURL.pathExtension == "app" }
     @Published var confirmTrash: Bool { didSet { defaults.set(!confirmTrash, forKey: Keys.skipTrashConfirmation) } }
+    /// 휴지통에서 `NoteStore.trashRetentionDays`일이 지난 스티커를 저절로 지운다. 기본은 켬.
+    @Published var autoEmptyTrash: Bool { didSet { defaults.set(autoEmptyTrash, forKey: Keys.autoEmptyTrash) } }
 
     init() {
         Self.moveDefaultsToBundle()
@@ -173,6 +176,7 @@ final class AppSettings: ObservableObject {
         sounds = defaults.dictionary(forKey: Keys.sounds) as? [String: String] ?? [:]
         soundEffects = defaults.object(forKey: Keys.soundEffects) as? Bool ?? false
         confirmTrash = !defaults.bool(forKey: Keys.skipTrashConfirmation)
+        autoEmptyTrash = defaults.object(forKey: Keys.autoEmptyTrash) as? Bool ?? true
         SoundEffect.isEnabled = soundEffects
         SoundEffect.choices = sounds
         applyNewNoteFont()

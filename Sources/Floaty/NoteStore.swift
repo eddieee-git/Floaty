@@ -86,6 +86,22 @@ final class NoteStore: ObservableObject {
         save()
     }
 
+    static let trashRetentionDays = 30
+
+    /// 휴지통에 들어간 지 `trashRetentionDays`일이 지난 스티커를 영구 삭제하고, 지운 개수를 돌려준다.
+    @discardableResult
+    func purgeExpiredTrash(now: Date = Date()) -> Int {
+        let limit = now.addingTimeInterval(-TimeInterval(Self.trashRetentionDays) * 86400)
+        let expired = Set(trashedNotes.filter { ($0.deletedAt ?? now) < limit }.map(\.id))
+        if !expired.isEmpty { remove(ids: expired) }
+        return expired.count
+    }
+
+    /// 휴지통의 스티커가 저절로 지워지는 날.
+    static func purgeDate(for note: Note) -> Date? {
+        note.deletedAt.map { $0.addingTimeInterval(TimeInterval(trashRetentionDays) * 86400) }
+    }
+
     func emptyTrash() {
         trashedNotes.map(\.id).forEach(deleteBody)
         notes.removeAll(where: \.isTrashed)

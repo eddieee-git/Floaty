@@ -33,6 +33,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusMenu: NSMenu?
     private var relockItem: NSMenuItem?
     private var alarmTimer: Timer?
+    private var purgeTimer: Timer?
+    private var autoEmptySubscription: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.appearance = settings.theme.appearance
@@ -50,10 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.controllers.values.forEach { $0.note.opacity = value }
             }
         }
-        // 모두 숨긴 동안에는 메뉴바 아이콘을 흐리게 해서 앱이 꺼진 것이 아님을 알린다.
+        // 모두 숨긴 동안에는 메뉴바 아이콘의 메모지를 점선으로 그려 스티커가 숨어 있음을 알린다.
         hidingAllSubscription = store.$notes.receive(on: DispatchQueue.main).sink { [weak self] notes in
             let hidingAll = notes.contains { !$0.isTrashed && $0.isHiddenWithAll && !$0.isHidden }
-            self?.statusItem?.button?.appearsDisabled = hidingAll
+            self?.statusItem?.button?.image = MenuBarIcon.make(hidingAll: hidingAll)
             self?.statusItem?.button?.toolTip = hidingAll ? L("모두 숨김 중") : nil
         }
         hotKeySubscription = settings.$hotKeys.combineLatest(settings.$isRecordingHotKey).sink { [weak self] combos, isRecording in
@@ -85,6 +87,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         alarmTimer = timer
         // 메뉴바 앱이라 처음 설치했을 때만 안내 스티커로 실행된 것을 알린다. 그 뒤로는 있던 그대로 띄운다.
         store.reconcileEncryption()
+        purgeTrashIfNeeded()
+        // 앱을 오래 켜 두어도 지난 것을 비우도록 한 시간마다 확인한다. 설정을 켜는 순간에도 비운다.
+        let purgeTimer = Timer(timeInterval: 3600, repeats: true) { [weak self] _ in self?.purgeTrashIfNeeded() }
+        RunLoop.main.add(purgeTimer, forMode: .common)
+        self.purgeTimer = purgeTimer
+        autoEmptySubscription = settings.$autoEmptyTrash.dropFirst().sink { [weak self] isOn in
+            if isOn { DispatchQueue.main.async { self?.purgeTrashIfNeeded() } }
+        }
         if store.isFirstRun {
             showWelcome()
         } else {
@@ -98,6 +108,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// 메뉴바 앱이라 화면에 보이지 않지만, ⌘C·⌘V·⌘Z와 서식 단축키는 주 메뉴를 거쳐 전달되므로 필요하다.
+    private func purgeTrashIfNeeded() {
+        if settings.autoEmptyTrash { store.purgeExpiredTrash() }
+    }
+
     private func setupMainMenu() {
         let main = NSMenu()
 
@@ -121,6 +135,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         edit.addItem(withTitle: L("서식 없이 붙여넣기"), action: #selector(FormattingTextView.pasteWithoutFormatting(_:)), keyEquivalent: "v")
             .keyEquivalentModifierMask = [.command, .option, .shift]
         edit.addItem(withTitle: L("모두 선택"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(.separator())
+        // 스티커 본문 안에서 찾기. ⌘F는 스티커 관리 창의 검색이다.
+        func addFind(_ title: String, _ action: NSTextFinder.Action, _ key: String, _ modifiers: NSEvent.ModifierFlags) {
+            let item = edit.addItem(withTitle: title, action: #selector(NSResponder.performTextFinderAction(_:)), keyEquivalent: key)
+            item.keyEquivalentModifierMask = modifiers
+            item.tag = action.rawValue
+        }
+        addFind(L("이 스티커에서 찾기…"), .showFindInterface, "f", [.command, .shift])
+        addFind(L("다음 찾기"), .nextMatch, "g", .command)
+        addFind(L("이전 찾기"), .previousMatch, "g", [.command, .shift])
         main.addItem(withTitle: L("편집"), action: nil, keyEquivalent: "").submenu = edit
 
         main.addItem(withTitle: L("서식"), action: nil, keyEquivalent: "").submenu =

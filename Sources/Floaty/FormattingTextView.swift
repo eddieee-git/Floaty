@@ -177,6 +177,8 @@ final class FormattingTextView: NSTextView {
         let selected = selectedRanges.map(\.rangeValue).filter { $0.length > 0 }
         let ranges = selected.isEmpty ? [NSRange(location: 0, length: storage.length)] : selected
         if storage.length > 0 {
+            // 바로 앞의 입력과 한 번에 되돌려지지 않게 실행 취소 묶음을 끊는다.
+            breakTypingCoalescing()
             guard shouldChangeText(inRanges: ranges.map { NSValue(range: $0) }, replacementStrings: nil) else { return }
             storage.beginEditing()
             for range in ranges {
@@ -287,6 +289,8 @@ final class FormattingTextView: NSTextView {
     private func editSelection(_ edit: (NSTextStorage, NSRange) -> Void) {
         guard let storage = textStorage else { return }
         let ranges = selectedRanges.filter { $0.rangeValue.length > 0 }
+        // 바로 앞의 입력과 한 번에 되돌려지지 않게 실행 취소 묶음을 끊는다.
+        breakTypingCoalescing()
         guard shouldChangeText(inRanges: ranges, replacementStrings: nil) else { return }
         storage.beginEditing()
         ranges.forEach { edit(storage, $0.rangeValue) }
@@ -320,6 +324,8 @@ final class FormattingTextView: NSTextView {
         // 다른 종류의 표시가 있으면 바꿔 끼우고, 없으면 새로 붙인다.
         let ranges = starts.map { NSRange(location: $0, length: self.marker(at: $0) == nil ? 0 : Self.markerLength) }
         let replacement = removing ? "" : marker
+        // 바로 앞의 입력과 한 번에 되돌려지지 않게 실행 취소 묶음을 끊는다.
+        breakTypingCoalescing()
         guard shouldChangeText(inRanges: ranges.map { NSValue(range: $0) },
                                replacementStrings: ranges.map { _ in replacement }) else { return }
         storage.beginEditing()
@@ -367,6 +373,18 @@ final class FormattingTextView: NSTextView {
         super.mouseDown(with: event)
     }
 
+    private var checkboxTracking: NSTrackingArea?
+
+    /// 창이 앞에 없어도 마우스 이동을 받아 체크박스 위 커서를 바꾼다.
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if checkboxTracking == nil {
+            let area = NSTrackingArea(rect: .zero, options: [.mouseMoved, .activeAlways, .inVisibleRect], owner: self)
+            addTrackingArea(area)
+            checkboxTracking = area
+        }
+    }
+
     /// 체크박스 위에서는 손가락 모양 커서를 보인다.
     override func mouseMoved(with event: NSEvent) {
         if checkbox(at: convert(event.locationInWindow, from: nil)) != nil {
@@ -397,11 +415,36 @@ final class FormattingTextView: NSTextView {
         guard let storage = textStorage, let marker = marker(at: location), marker != Self.bullet else { return }
         let range = NSRange(location: location, length: 1)
         let replacement = String((marker == Self.unchecked ? Self.checked : Self.unchecked).prefix(1))
+        // 바로 앞의 입력과 한 번에 되돌려지지 않게 실행 취소 묶음을 끊는다.
+        breakTypingCoalescing()
         guard shouldChangeText(in: range, replacementString: replacement) else { return }
         let attributes = storage.attributes(at: location, effectiveRange: nil)
         storage.replaceCharacters(in: range, with: NSAttributedString(string: replacement, attributes: attributes))
         didChangeText()
         undoManager?.setActionName(L("체크"))
+    }
+
+    /// 같은 본문을 스티커와 관리 창이 함께 쓰므로, 다른 편집기에서 이어 치던 입력 묶음까지 끊는다.
+    private func breakTypingCoalescing() {
+        (textStorage?.layoutManagers ?? []).compactMap(\.firstTextView).forEach { $0.breakUndoCoalescing() }
+        breakUndoCoalescing()
+    }
+
+    // MARK: 링크
+
+    /// 링크 인식을 켜기 전에 써 둔 주소도 누를 수 있게 한다. 불러올 때 한 번 하며 실행 취소에 남기지 않는다.
+    func detectExistingLinks() {
+        guard let storage = textStorage, storage.length > 0,
+              let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { return }
+        let whole = NSRange(location: 0, length: storage.length)
+        let matches = detector.matches(in: storage.string, range: whole)
+        guard !matches.isEmpty else { return }
+        storage.beginEditing()
+        for match in matches {
+            guard let url = match.url, storage.attribute(.link, at: match.range.location, effectiveRange: nil) == nil else { continue }
+            storage.addAttribute(.link, value: url, range: match.range)
+        }
+        storage.endEditing()
     }
 
     // MARK: 이미지

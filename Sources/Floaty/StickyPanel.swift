@@ -27,4 +27,12 @@ final class StickyPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     /// 글꼴 창이 앞에 있어도 서식 단축키와 글꼴 변경이 스티커 본문에 전달되려면 주 창이 될 수 있어야 한다.
     override var canBecomeMain: Bool { true }
+
+    /// 스티커 어디를 누르든 불린다. 버튼·메뉴가 먼저 처리한 뒤에 불린다.
+    var onClick: (() -> Void)?
+
+    override func sendEvent(_ event: NSEvent) {
+        super.sendEvent(event)
+        if event.type == .leftMouseDown || event.type == .rightMouseDown { onClick?() }
+    }
 }

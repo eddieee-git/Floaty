@@ -76,6 +76,10 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         super.init()
 
         setupTextView()
+        // 울리는 스티커를 누르면 본 것으로 여겨 알람을 끈다. 메뉴에서 다시 알림을 고르면 이미 멈춘 상태라 그 시각이 남는다.
+        panel.onClick = { [weak self] in
+            if self?.isAlarmRinging == true { self?.dismissAlarm() }
+        }
         // 본문 파일이 없으면 이전 버전의 일반 텍스트를 옮겨 온다.
         let initialBody = body ?? NSAttributedString(string: note.text, attributes: FormattingTextView.defaultAttributes)
         textView.textStorage?.setAttributedString(initialBody)

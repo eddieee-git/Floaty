@@ -54,7 +54,9 @@ struct Note: Codable, Identifiable, Equatable {
     }
 
     var firstLine: String? {
-        let line = text.split(whereSeparator: \.isNewline).first.map(String.init) ?? ""
+        var line = text.split(whereSeparator: \.isNewline).first.map(String.init) ?? ""
+        // 글머리표와 체크박스는 제목에 넣지 않는다.
+        if let marker = ["• ", "☐ ", "☑ "].first(where: line.hasPrefix) { line.removeFirst(marker.count) }
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         return trimmed.isEmpty ? nil : trimmed
     }

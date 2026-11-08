@@ -1,6 +1,6 @@
 import AppKit
 
-/// 스티커 본문 편집기. 굵게·기울임·밑줄·취소선·글머리표·정렬·글씨체와 이미지 붙여넣기를 지원한다.
+/// 스티커 본문 편집기. 굵게·기울임·밑줄·취소선·글머리표·체크리스트·정렬·글씨체와 이미지 붙여넣기를 지원한다.
 final class FormattingTextView: NSTextView {
     /// Helvetica Neue는 저장한 시스템 글꼴을 다시 읽을 때 쓰이는 이름이라 목록에 두지 않는다(`NoteStore.restoringSystemFont`).
     static let fontFamilies = ["Apple SD Gothic Neo", "AppleMyungjo", "Nanum Gothic", "Nanum Myeongjo",
@@ -13,8 +13,12 @@ final class FormattingTextView: NSTextView {
     static var defaultAttributes: [NSAttributedString.Key: Any] {
         [.font: defaultFont, .foregroundColor: NSColor.black]
     }
-    private static let bullet = "• "
-    private static let bulletLength = (bullet as NSString).length
+    /// 문단 앞에 붙는 목록 표시. 모두 글자 두 개(UTF-16 기준)라 길이가 같다.
+    static let bullet = "• "
+    static let unchecked = "☐ "
+    static let checked = "☑ "
+    private static let markers = [bullet, unchecked, checked]
+    private static let markerLength = 2
 
     /// 메뉴바 앱이라 앱 메뉴가 보이지 않으므로, 같은 항목을 숨은 주 메뉴와 오른쪽 클릭 메뉴에 함께 쓴다.
     static func makeFormatMenu(target: AnyObject?) -> NSMenu {
@@ -29,6 +33,7 @@ final class FormattingTextView: NSTextView {
         add(L("밑줄"), #selector(underline(_:)), "u")
         add(L("취소선"), #selector(toggleStrikethrough(_:)), "x", [.command, .shift])
         add(L("글머리표"), #selector(toggleBulletList(_:)), "7")
+        add(L("체크리스트"), #selector(toggleChecklist(_:)), "l", [.command, .shift])
         add(L("서식 지우기"), #selector(clearFormatting(_:)), "\\")
         menu.addItem(.separator())
         add(L("왼쪽 정렬"), #selector(alignLeft(_:)), "{")
@@ -289,10 +294,19 @@ final class FormattingTextView: NSTextView {
         didChangeText()
     }
 
-    // MARK: 글머리표
+    // MARK: 글머리표와 체크리스트
 
-    /// 선택한 문단 모두에 글머리표가 있으면 빼고, 아니면 붙인다.
+    /// 선택한 문단 모두에 글머리표가 있으면 빼고, 아니면 붙인다. 체크박스가 있던 문단은 글머리표로 바꾼다.
     @objc func toggleBulletList(_ sender: Any?) {
+        toggleList(marker: Self.bullet) { $0 == Self.bullet }
+    }
+
+    /// 선택한 문단 모두에 체크박스가 있으면 빼고, 아니면 빈 체크박스를 붙인다. 글머리표가 있던 문단은 체크박스로 바꾼다.
+    @objc func toggleChecklist(_ sender: Any?) {
+        toggleList(marker: Self.unchecked) { $0 == Self.unchecked || $0 == Self.checked }
+    }
+
+    private func toggleList(marker: String, isSameKind: (String) -> Bool) {
         guard let storage = textStorage else { return }
         let text = storage.string as NSString
         let paragraphs = text.paragraphRange(for: selectedRange())
@@ -302,39 +316,92 @@ final class FormattingTextView: NSTextView {
         }
         if starts.isEmpty { starts = [paragraphs.location] } // 빈 문단
 
-        let removing = starts.allSatisfy(hasBullet(at:))
-        let ranges = starts.map { NSRange(location: $0, length: removing ? Self.bulletLength : 0) }
-        let replacements = ranges.map { _ in removing ? "" : Self.bullet }
-        guard shouldChangeText(inRanges: ranges.map { NSValue(range: $0) }, replacementStrings: replacements) else { return }
+        let removing = starts.allSatisfy { self.marker(at: $0).map(isSameKind) ?? false }
+        // 다른 종류의 표시가 있으면 바꿔 끼우고, 없으면 새로 붙인다.
+        let ranges = starts.map { NSRange(location: $0, length: self.marker(at: $0) == nil ? 0 : Self.markerLength) }
+        let replacement = removing ? "" : marker
+        guard shouldChangeText(inRanges: ranges.map { NSValue(range: $0) },
+                               replacementStrings: ranges.map { _ in replacement }) else { return }
         storage.beginEditing()
         // 뒤에서부터 바꿔야 앞쪽 위치가 밀리지 않는다.
         for range in ranges.reversed() {
-            storage.replaceCharacters(in: range, with: removing ? "" : Self.bullet)
+            let attributes = range.location < storage.length ? storage.attributes(at: range.location, effectiveRange: nil)
+                                                              : typingAttributes
+            storage.replaceCharacters(in: range, with: NSAttributedString(string: replacement, attributes: attributes))
         }
         storage.endEditing()
         didChangeText()
     }
 
-    /// 글머리표 문단에서 Enter를 치면 다음 줄에도 붙이고, 빈 글머리표 줄에서 치면 목록을 끝낸다.
+    /// 목록 문단에서 Enter를 치면 다음 줄에도 같은 표시를 붙이고(체크박스는 빈 칸으로), 빈 목록 줄에서 치면 목록을 끝낸다.
     override func insertNewline(_ sender: Any?) {
         let text = string as NSString
         let caret = selectedRange()
         let paragraph = text.paragraphRange(for: NSRange(location: caret.location, length: 0))
-        guard hasBullet(at: paragraph.location) else { return super.insertNewline(sender) }
+        guard let marker = marker(at: paragraph.location) else { return super.insertNewline(sender) }
 
         let line = text.substring(with: paragraph).trimmingCharacters(in: .newlines)
-        if line == Self.bullet, caret.length == 0 {
-            insertText("", replacementRange: NSRange(location: paragraph.location, length: Self.bulletLength))
+        if line == marker, caret.length == 0 {
+            insertText("", replacementRange: NSRange(location: paragraph.location, length: Self.markerLength))
         } else {
             super.insertNewline(sender)
-            insertText(Self.bullet, replacementRange: selectedRange())
+            insertText(marker == Self.bullet ? Self.bullet : Self.unchecked, replacementRange: selectedRange())
         }
     }
 
-    private func hasBullet(at location: Int) -> Bool {
+    /// 문단 첫머리의 목록 표시.
+    private func marker(at location: Int) -> String? {
         let text = string as NSString
-        guard location + Self.bulletLength <= text.length else { return false }
-        return text.substring(with: NSRange(location: location, length: Self.bulletLength)) == Self.bullet
+        guard location + Self.markerLength <= text.length else { return nil }
+        let head = text.substring(with: NSRange(location: location, length: Self.markerLength))
+        return Self.markers.first { $0 == head }
+    }
+
+    /// 체크박스를 누르면 커서를 옮기지 않고 체크하거나 푼다.
+    override func mouseDown(with event: NSEvent) {
+        if isEditable, event.clickCount == 1, event.modifierFlags.intersection([.shift, .command, .option]).isEmpty,
+           let location = checkbox(at: convert(event.locationInWindow, from: nil)) {
+            toggleCheckbox(at: location)
+            return
+        }
+        super.mouseDown(with: event)
+    }
+
+    /// 체크박스 위에서는 손가락 모양 커서를 보인다.
+    override func mouseMoved(with event: NSEvent) {
+        if checkbox(at: convert(event.locationInWindow, from: nil)) != nil {
+            NSCursor.pointingHand.set()
+        } else {
+            super.mouseMoved(with: event)
+        }
+    }
+
+    /// 그 점에 문단 첫머리의 체크박스 글자가 있으면 그 위치.
+    func checkbox(at point: NSPoint) -> Int? {
+        guard let layoutManager, let textContainer else { return nil }
+        let inContainer = NSPoint(x: point.x - textContainerOrigin.x, y: point.y - textContainerOrigin.y)
+        let glyph = layoutManager.glyphIndex(for: inContainer, in: textContainer)
+        guard glyph < layoutManager.numberOfGlyphs else { return nil }
+        // 글자 둘레를 조금 넓혀 누르기 쉽게 한다.
+        let box = layoutManager.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: textContainer)
+            .insetBy(dx: -3, dy: -2)
+        guard box.contains(inContainer) else { return nil }
+        let index = layoutManager.characterIndexForGlyph(at: glyph)
+        let text = string as NSString
+        guard text.paragraphRange(for: NSRange(location: index, length: 0)).location == index,
+              let marker = marker(at: index), marker != Self.bullet else { return nil }
+        return index
+    }
+
+    func toggleCheckbox(at location: Int) {
+        guard let storage = textStorage, let marker = marker(at: location), marker != Self.bullet else { return }
+        let range = NSRange(location: location, length: 1)
+        let replacement = String((marker == Self.unchecked ? Self.checked : Self.unchecked).prefix(1))
+        guard shouldChangeText(in: range, replacementString: replacement) else { return }
+        let attributes = storage.attributes(at: location, effectiveRange: nil)
+        storage.replaceCharacters(in: range, with: NSAttributedString(string: replacement, attributes: attributes))
+        didChangeText()
+        undoManager?.setActionName(L("체크"))
     }
 
     // MARK: 이미지

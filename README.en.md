@@ -64,7 +64,7 @@ This creates `build/Floaty.app` and `build/Floaty.dmg`.
 
 ## Good to know
 
-- Stickies are stored only on this Mac. Nothing is sent to a server, and there is no iCloud sync.
+- Stickies are stored only on this Mac. Nothing is sent to a server, and there is no iCloud sync. The last 7 days are backed up automatically, once a day.
 - The body of a locked note is encrypted on disk (the key is in your login keychain). Titles are not encrypted, and other apps running under your account are not blocked.
 - The app is signed with the hardened runtime. It has no third-party libraries and sends nothing over the internet.
 

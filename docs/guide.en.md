@@ -23,8 +23,8 @@ Click the **menu bar icon** to open this menu.
 |---|---|
 | Create and find | New Sticky, Manage Stickies…, Stickies ▸ (every sticky; visible ones are checked) |
 | All stickies | Show/Hide All, Collapse/Expand All, Lock All Again (only when a sticky is locked) |
-| File | File ▸ Import… / Save All… |
-| App | Settings…, Quit Floaty |
+| File | File ▸ Import… / Save All… / Show Backups Folder |
+| App | Settings…, Check for Updates… (opens the Releases page), Quit Floaty |
 
 A **sticky** has three rows.
 
@@ -52,7 +52,7 @@ Select text, then use the format row buttons or shortcuts. If nothing is selecte
 
 **Checklist** (checklist button, ⌘⇧L) puts ☐ in front of the selected lines. Click ☐ to check it (☑); the line turns gray with a strikethrough. Click again to uncheck. Press Return on a checklist line to start the next line with an empty ☐; press it again on an empty line to end the list. Press the button again to remove the boxes; on bullet lines it turns them into a checklist.
 
-**Links** become clickable automatically when you type or paste an address. Click one to open it in your browser.
+**Links** become clickable automatically when you type or paste an address. Click one to open it in your browser. Links that aren't web or mail addresses (ones that open a file or another app) show the real address and ask first.
 
 **Find:** Press ⌘⇧F inside a sticky to show a find bar above the note. ⌘G and ⌘⇧G go to the next and previous match.
 
@@ -122,6 +122,14 @@ Select several notes with ⌘ or ⇧ to show, hide, move to Trash, or change the
 - **Import:** **File → Import…** in the menu bar. Each file becomes a new sticky.
 - **Print:** **Print…** (⌘P) in the palette menu prints the title and note on white paper.
 
+### Automatic backups
+
+Once a day, Floaty copies the sticky list and note bodies to `~/Library/Application Support/Floaty/Backups/<date>` and keeps the last 7 days. Open it with **File → Show Backups Folder** in the menu bar. Locked notes are copied still encrypted.
+
+If the list file is damaged and can't be read, Floaty doesn't overwrite it. It sets it aside as `notes-unreadable-<time>.json`, restores the list from the most recent backup, and tells you.
+
+To restore by hand, quit Floaty, copy `notes.json` and the `bodies` folder from the date folder you want over the ones in the `Floaty` folder, and open Floaty again.
+
 ## Keyboard shortcuts
 
 ### Global shortcuts
@@ -182,6 +190,9 @@ Check the red message at the bottom of the window. A key used by another item, o
 
 **My own sound file doesn't play.**
 Sound files aren't copied; Floaty remembers where they are. If you move or delete the file, the default sound is used.
+
+**What happens if I open Floaty twice?**
+If it's already running, the new copy quits right away and the running one shows the Manage Stickies window, so two copies never overwrite each other's files.
 
 **Where are stickies stored?**
 In `~/Library/Application Support/Floaty`. The [installation guide](install.en.md#moving-to-another-mac) explains how to move them to another Mac.

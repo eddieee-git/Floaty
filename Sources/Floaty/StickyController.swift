@@ -647,7 +647,7 @@ struct FormatBar: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .frame(width: 24)
-        .help(L("글자 크기"))
+        .labeledHelp(L("글자 크기"))
 
         Button {
             pickingTextColor = true
@@ -657,7 +657,7 @@ struct FormatBar: View {
             Text("A").foregroundStyle(color).underline(color: color)
         }
         .buttonStyle(.borderless)
-        .help(L("글자색"))
+        .labeledHelp(L("글자색"))
         .popover(isPresented: $pickingTextColor) {
             ColorChoices(colors: Self.textColors) { color in
                 pickingTextColor = false
@@ -675,7 +675,7 @@ struct FormatBar: View {
                 .background(highlight.map { Color(nsColor: $0) } ?? .clear, in: RoundedRectangle(cornerRadius: 3))
         }
         .buttonStyle(.borderless)
-        .help(L("형광펜"))
+        .labeledHelp(L("형광펜"))
         .popover(isPresented: $pickingHighlight) {
             ColorChoices(colors: Self.highlights) { color in
                 pickingHighlight = false
@@ -691,7 +691,7 @@ struct FormatBar: View {
             Image(systemName: symbol)
         }
         .buttonStyle(.borderless)
-        .help(help)
+        .labeledHelp(help)
     }
 }
 
@@ -823,6 +823,7 @@ struct StickyView: View {
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .fixedSize()
+                .labeledHelp(L("색과 메뉴"))
 
                 headerButton(controller.note.isCollapsed ? "chevron.down" : "chevron.up",
                              help: controller.note.isCollapsed ? L("펼치기") : L("최소화")) {
@@ -907,7 +908,7 @@ struct StickyView: View {
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, -5)
-        .help(help)
+        .labeledHelp(help)
     }
 
     private var alarmMenu: some View {
@@ -919,7 +920,7 @@ struct StickyView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(controller.note.alarmDate.map { date in
+        .labeledHelp(controller.note.alarmDate.map { date in
             controller.note.alarmDailyMinutes != nil ? L("매일 %@ 알람", settings.timeStyle.text(date))
                                                      : L("알람: %@", settings.dateText(date, compact: false))
         } ?? L("알람 설정"))
@@ -945,7 +946,7 @@ struct StickyView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(lockHelp)
+        .labeledHelp(lockHelp)
     }
 
     private var lockHelp: String {
@@ -1028,5 +1029,12 @@ struct StickyView: View {
         controller.panel.makeKey()
         // 입력란이 화면에 생긴 다음에 초점을 줘야 한다.
         DispatchQueue.main.async { titleFocused = true }
+    }
+}
+
+extension View {
+    /// 마우스를 올렸을 때의 설명을 VoiceOver가 읽는 이름으로도 쓴다. 아이콘만 있는 버튼에 쓴다.
+    func labeledHelp(_ text: String) -> some View {
+        help(text).accessibilityLabel(Text(text))
     }
 }

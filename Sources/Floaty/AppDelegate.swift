@@ -33,6 +33,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusMenu: NSMenu?
     private var relockItem: NSMenuItem?
     private var alarmTimer: Timer?
+    private var alarmSubscription: AnyCancellable?
+
+    /// 잠자기나 시계 변경에도 놓치지 않도록 시각마다 예약하지 않고 주기적으로 확인한다.
+    /// 앱이 꺼져 있는 동안 지난 알람은 시작 직후 울린다. 울리는 스티커의 깜빡임도 이 주기를 따른다.
+    private func setAlarmTimer(running: Bool) {
+        guard running != (alarmTimer != nil) else { return }
+        alarmTimer?.invalidate()
+        alarmTimer = nil
+        guard running else { return }
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+            self?.controllers.values.forEach { $0.checkAlarm() }
+        }
+        timer.tolerance = 0.1
+        RunLoop.main.add(timer, forMode: .common)
+        alarmTimer = timer
+    }
     private var purgeTimer: Timer?
     private var autoEmptySubscription: AnyCancellable?
 
@@ -53,17 +69,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
         // 모두 숨긴 동안에는 메뉴바 아이콘의 메모지를 점선으로 그려 스티커가 숨어 있음을 알린다.
-        hidingAllSubscription = store.$notes.receive(on: DispatchQueue.main).sink { [weak self] notes in
-            let hidingAll = notes.contains { !$0.isTrashed && $0.isHiddenWithAll && !$0.isHidden }
-            self?.statusItem?.button?.image = MenuBarIcon.make(hidingAll: hidingAll)
-            self?.statusItem?.button?.toolTip = hidingAll ? L("모두 숨김 중") : nil
-        }
+        // 글자를 칠 때마다 목록이 바뀌므로, 실제로 상태가 달라질 때만 아이콘을 다시 그린다.
+        hidingAllSubscription = store.$notes
+            .map { notes in notes.contains { !$0.isTrashed && $0.isHiddenWithAll && !$0.isHidden } }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] hidingAll in
+                self?.statusItem?.button?.image = MenuBarIcon.make(hidingAll: hidingAll)
+                self?.statusItem?.button?.toolTip = hidingAll ? L("모두 숨김 중") : nil
+            }
+        // 걸린 알람이 있을 때만 확인 타이머를 돌려, 할 일이 없을 때는 Mac을 깨우지 않는다.
+        alarmSubscription = store.$notes
+            .map { notes in notes.contains { !$0.isTrashed && $0.alarmDate != nil } }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] needed in self?.setAlarmTimer(running: needed) }
         hotKeySubscription = settings.$hotKeys.combineLatest(settings.$isRecordingHotKey).sink { [weak self] combos, isRecording in
             self?.registerHotKeys(isRecording ? [:] : combos)
             self?.updateHotKeyItems(combos)
         }
         NotificationCenter.default.addObserver(
             self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: nil)
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(anotherInstanceLaunched), name: SingleInstance.launchedAgain, object: nil)
         // 숨길 때 포커스를 넘겨받은 스티커는 이미 키 창이라 알림이 다시 오지 않으므로, 직접 누르거나 입력한 것도 살핀다.
         NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .keyDown]) { [weak self] event in
             self?.setCurrentNote(from: event.window)
@@ -78,18 +106,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self, selector: #selector(relockAll), name: NSWorkspace.screensDidSleepNotification, object: nil)
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(relockAll), name: Notification.Name("com.apple.screenIsLocked"), object: nil)
-        // 잠자기나 시계 변경에도 놓치지 않도록 시각마다 예약하지 않고 주기적으로 확인한다.
-        // 앱이 꺼져 있는 동안 지난 알람은 시작 직후 울린다. 울리는 스티커의 깜빡임도 이 주기를 따른다.
-        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
-            self?.controllers.values.forEach { $0.checkAlarm() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        alarmTimer = timer
         // 메뉴바 앱이라 처음 설치했을 때만 안내 스티커로 실행된 것을 알린다. 그 뒤로는 있던 그대로 띄운다.
         store.reconcileEncryption()
+        reportLoadProblem()
         purgeTrashIfNeeded()
+        store.backupIfNeeded()
         // 앱을 오래 켜 두어도 지난 것을 비우도록 한 시간마다 확인한다. 설정을 켜는 순간에도 비운다.
-        let purgeTimer = Timer(timeInterval: 3600, repeats: true) { [weak self] _ in self?.purgeTrashIfNeeded() }
+        // 백업도 날짜가 바뀌었는지 같은 주기로 확인한다.
+        let purgeTimer = Timer(timeInterval: 3600, repeats: true) { [weak self] _ in
+            self?.purgeTrashIfNeeded()
+            self?.store.backupIfNeeded()
+        }
         RunLoop.main.add(purgeTimer, forMode: .common)
         self.purgeTimer = purgeTimer
         autoEmptySubscription = settings.$autoEmptyTrash.dropFirst().sink { [weak self] isOn in
@@ -108,6 +135,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// 메뉴바 앱이라 화면에 보이지 않지만, ⌘C·⌘V·⌘Z와 서식 단축키는 주 메뉴를 거쳐 전달되므로 필요하다.
+    /// 목록 파일을 제대로 읽지 못했으면 무엇을 했는지 알리고 파일 위치를 보여 준다.
+    private func reportLoadProblem() {
+        guard let problem = store.loadProblem else { return }
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L("스티커 목록 파일을 제대로 읽지 못했습니다")
+        var reveal: URL?
+        switch problem {
+        case let .unreadable(preserved, restoredFrom):
+            reveal = preserved ?? store.directory
+            if preserved == nil {
+                alert.informativeText = L("파일을 열 수 없어 내용을 덮어쓰지 않도록 저장을 멈췄습니다. Floaty를 끄고 파일 권한을 확인해 주세요.")
+            } else if let restoredFrom {
+                alert.informativeText = L("깨진 파일은 옆에 따로 두고, %@ 백업에서 스티커 목록을 되살렸습니다. 그 뒤에 바꾼 위치·색·제목은 빠졌을 수 있습니다.", restoredFrom)
+            } else {
+                alert.informativeText = L("깨진 파일은 옆에 따로 두었습니다. 되살릴 백업이 없어 빈 목록으로 시작합니다.")
+            }
+        case let .partial(skipped, preserved):
+            reveal = preserved
+            alert.informativeText = L("스티커 %d개를 읽지 못해 빼고 열었습니다. 원래 파일은 옆에 복사해 두었습니다.", skipped)
+        }
+        alert.addButton(withTitle: L("확인"))
+        if reveal != nil { alert.addButton(withTitle: L("Finder에서 보기")) }
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertSecondButtonReturn, let reveal {
+            NSWorkspace.shared.activateFileViewerSelecting([reveal])
+        }
+    }
+
+    @objc private func openReleases() {
+        NSWorkspace.shared.open(URL(string: "https://github.com/eddieee-git/Floaty/releases")!)
+    }
+
+    @objc private func showBackups() {
+        let dir = store.backupsDir
+        if FileManager.default.fileExists(atPath: dir.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([dir])
+        } else {
+            NSWorkspace.shared.open(store.directory)
+        }
+    }
+
+    /// 다른 Floaty가 이미 켜져 있어 새로 켠 쪽이 꺼질 때, 켜져 있던 쪽이 관리 창을 보여 실행 중임을 알린다.
+    @objc private func anotherInstanceLaunched() {
+        showManager()
+    }
+
     private func purgeTrashIfNeeded() {
         if settings.autoEmptyTrash { store.purgeExpiredTrash() }
     }
@@ -222,9 +296,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let fileMenu = NSMenu()
         fileMenu.addItem(withTitle: L("불러오기…"), action: #selector(importFiles), keyEquivalent: "").target = self
         fileMenu.addItem(withTitle: L("모두 저장…"), action: #selector(saveAllToFiles), keyEquivalent: "").target = self
+        fileMenu.addItem(.separator())
+        fileMenu.addItem(withTitle: L("백업 폴더 보기"), action: #selector(showBackups), keyEquivalent: "").target = self
         menu.addItem(withTitle: L("파일"), action: nil, keyEquivalent: "").submenu = fileMenu
         menu.addItem(.separator())
         menu.addItem(withTitle: L("설정…"), action: #selector(showSettings), keyEquivalent: ",").target = self
+        // 인터넷으로 확인하지 않고, 누르면 Releases 페이지를 연다.
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
+        menu.addItem(withTitle: L("새 버전 확인… (지금 %@)", version), action: #selector(openReleases), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: L("Floaty 종료"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.delegate = self

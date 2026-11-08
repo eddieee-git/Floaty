@@ -482,6 +482,26 @@ final class FormattingTextView: NSTextView {
 
     // MARK: 링크
 
+    /// 웹과 메일 주소만 바로 연다. 붙여 넣거나 불러온 서식에 숨은 파일·앱 주소는 실제 주소를 보여 주고 확인을 받는다.
+    static let safeLinkSchemes: Set<String> = ["http", "https", "mailto"]
+
+    override func clicked(onLink link: Any, at charIndex: Int) {
+        let url = (link as? URL) ?? (link as? String).flatMap(URL.init(string:))
+        guard let url else { return }
+        if let scheme = url.scheme?.lowercased(), Self.safeLinkSchemes.contains(scheme) {
+            NSWorkspace.shared.open(url)
+            return
+        }
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L("웹 주소가 아닌 링크입니다")
+        alert.informativeText = L("이 링크는 파일이나 다른 앱을 열 수 있습니다. 믿을 수 있는 링크일 때만 여세요.\n\n%@", url.absoluteString)
+        alert.addButton(withTitle: L("취소"))
+        alert.addButton(withTitle: L("열기"))
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertSecondButtonReturn { NSWorkspace.shared.open(url) }
+    }
+
     /// 링크 인식을 켜기 전에 써 둔 주소도 누를 수 있게 한다. 불러올 때 한 번 하며 실행 취소에 남기지 않는다.
     func detectExistingLinks() {
         guard let storage = textStorage, storage.length > 0,

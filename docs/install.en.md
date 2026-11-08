@@ -64,7 +64,7 @@ Quit Floaty, copy this folder, and put it in the same place on the other Mac.
 ~/Library/Application Support/Floaty
 ```
 
-This folder contains only your stickies. Settings such as shortcuts and colors need to be set again on the other Mac.
+This folder contains only your stickies and their automatic backups (`Backups`). Settings such as shortcuts and colors need to be set again on the other Mac.
 
 > [!IMPORTANT]
 > Locked notes are encrypted with a key in this Mac's keychain, so they won't open on another Mac. Before moving, choose **Remove Lock** on each locked note, then lock them again afterwards.

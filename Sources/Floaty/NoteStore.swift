@@ -16,6 +16,28 @@ final class NoteStore: ObservableObject {
     private(set) var unreadableBodies = Set<UUID>()
     /// 저장 파일이 아직 없다. 스티커를 모두 지운 뒤에는 파일이 남으므로 처음 설치한 때와 구분된다.
     let isFirstRun: Bool
+    /// 목록 파일을 제대로 읽지 못했을 때 사용자에게 알릴 내용.
+    private(set) var loadProblem: LoadProblem?
+    /// 파일을 열 수조차 없으면 빈 목록으로 덮어쓰지 않도록 저장을 멈춘다.
+    private var savingBlocked = false
+    let directory: URL
+    var backupsDir: URL { directory.appendingPathComponent("Backups", isDirectory: true) }
+
+    enum LoadProblem {
+        /// 파일이 깨져 읽지 못했다. 깨진 파일은 `preserved`로 옮겨 두고, 백업이 있으면 그것을 읽었다.
+        case unreadable(preserved: URL?, restoredFrom: String?)
+        /// 스티커 몇 개만 읽지 못했다. 원래 파일은 `preserved`에 복사해 두었다.
+        case partial(skipped: Int, preserved: URL?)
+    }
+
+    /// 하나가 깨져도 나머지는 읽도록 스티커를 따로 푼다.
+    private struct LossyNote: Decodable {
+        let note: Note?
+        init(from decoder: Decoder) throws { note = try? Note(from: decoder) }
+    }
+
+    /// 날마다 하나씩, 이만큼 보관한다.
+    static let backupCount = 7
 
     var activeNotes: [Note] { notes.filter { !$0.isTrashed } }
     var trashedNotes: [Note] { notes.filter(\.isTrashed) }
@@ -24,14 +46,112 @@ final class NoteStore: ObservableObject {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Floaty", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        directory = dir
         url = dir.appendingPathComponent("notes.json")
         isFirstRun = !FileManager.default.fileExists(atPath: url.path)
         bodiesDir = dir.appendingPathComponent("bodies", isDirectory: true)
         try? FileManager.default.createDirectory(at: bodiesDir, withIntermediateDirectories: true)
-        if let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode([Note].self, from: data) {
-            notes = decoded
+        load()
+    }
+
+    /// 읽지 못한 목록 파일을 빈 목록으로 덮어쓰지 않는다. 깨진 파일은 옆에 남겨 두고, 가장 최근 백업에서 되살린다.
+    private func load() {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        guard let data = try? Data(contentsOf: url) else {
+            savingBlocked = true
+            loadProblem = .unreadable(preserved: nil, restoredFrom: nil)
+            return
         }
+        if let items = try? JSONDecoder().decode([LossyNote].self, from: data) {
+            notes = items.compactMap(\.note)
+            let skipped = items.count - notes.count
+            if skipped > 0 { loadProblem = .partial(skipped: skipped, preserved: preserveListFile(move: false)) }
+            return
+        }
+        let preserved = preserveListFile(move: true)
+        let restored = latestBackup()
+        notes = restored?.notes ?? []
+        loadProblem = .unreadable(preserved: preserved, restoredFrom: restored?.name)
+        if preserved == nil { savingBlocked = true }
+    }
+
+    /// notes.json을 notes-읽지못함-<시각>.json으로 옮기거나 복사한다.
+    private func preserveListFile(move: Bool) -> URL? {
+        let stamp = Self.stampFormatter.string(from: Date())
+        var target = directory.appendingPathComponent("notes-unreadable-\(stamp).json")
+        // 같은 초에 또 생기면 번호를 붙여 앞의 것을 덮어쓰지 않는다.
+        var number = 2
+        while FileManager.default.fileExists(atPath: target.path) {
+            target = directory.appendingPathComponent("notes-unreadable-\(stamp)-\(number).json")
+            number += 1
+        }
+        do {
+            if move { try FileManager.default.moveItem(at: url, to: target) }
+            else { try FileManager.default.copyItem(at: url, to: target) }
+            return target
+        } catch {
+            return nil
+        }
+    }
+
+    private static let stampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd-HHmmss"
+        return f
+    }()
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    // MARK: 백업
+
+    /// 오늘 백업이 없으면 목록 파일과 본문 폴더를 Backups/<날짜>에 복사하고, 오래된 것은 지운다.
+    /// 잠긴 메모의 본문은 암호화된 그대로 복사된다.
+    func backupIfNeeded(now: Date = Date()) {
+        guard loadProblem == nil || !savingBlocked else { return }
+        let fm = FileManager.default
+        let target = backupsDir.appendingPathComponent(Self.dayFormatter.string(from: now), isDirectory: true)
+        guard !fm.fileExists(atPath: target.path), fm.fileExists(atPath: url.path) else { return }
+        flush()
+        // 다 복사한 뒤에 이름을 바꿔, 중간에 끊긴 백업이 온전한 것처럼 보이지 않게 한다.
+        let partial = backupsDir.appendingPathComponent(".partial", isDirectory: true)
+        try? fm.removeItem(at: partial)
+        do {
+            try fm.createDirectory(at: partial, withIntermediateDirectories: true)
+            try fm.copyItem(at: url, to: partial.appendingPathComponent("notes.json"))
+            if fm.fileExists(atPath: bodiesDir.path) {
+                try fm.copyItem(at: bodiesDir, to: partial.appendingPathComponent("bodies", isDirectory: true))
+            }
+            try fm.moveItem(at: partial, to: target)
+        } catch {
+            try? fm.removeItem(at: partial)
+            return
+        }
+        let old = backupNames().dropLast(Self.backupCount)
+        old.forEach { try? fm.removeItem(at: backupsDir.appendingPathComponent($0, isDirectory: true)) }
+    }
+
+    /// 날짜 이름의 백업 폴더, 오래된 것부터.
+    func backupNames() -> [String] {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: backupsDir.path)) ?? []
+        return names.filter { Self.dayFormatter.date(from: $0) != nil }.sorted()
+    }
+
+    /// 읽을 수 있는 가장 최근 백업의 목록.
+    private func latestBackup() -> (name: String, notes: [Note])? {
+        for name in backupNames().reversed() {
+            let file = backupsDir.appendingPathComponent(name).appendingPathComponent("notes.json")
+            if let data = try? Data(contentsOf: file),
+               let items = try? JSONDecoder().decode([LossyNote].self, from: data) {
+                return (name, items.compactMap(\.note))
+            }
+        }
+        return nil
     }
 
     func upsert(_ note: Note) {
@@ -192,6 +312,7 @@ final class NoteStore: ObservableObject {
     private func save() {
         pendingSave?.cancel()
         pendingSave = nil
+        guard !savingBlocked else { return }
         let stored = notes.map { note -> Note in
             var note = note
             if note.isLocked { note.text = "" }

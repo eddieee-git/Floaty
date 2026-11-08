@@ -432,6 +432,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         copy.isHidden = false
         copy.isHiddenWithAll = false
         copy.alarmDate = nil
+        copy.alarmDailyMinutes = nil
         copy.frame = copy.frame.offsetBy(dx: 24, dy: -24)
         present(copy, body: source.textView.attributedString())
     }

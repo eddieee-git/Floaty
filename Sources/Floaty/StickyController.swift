@@ -31,6 +31,8 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         }
     }
 
+    private var checkedLineObserver: NSObjectProtocol?
+
     /// 알람이 울려 사용자의 확인을 기다리는 상태.
     @Published private(set) var isAlarmRinging = false {
         didSet { if !isAlarmRinging { isAlarmFlashing = false } }
@@ -86,6 +88,7 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         let initialBody = body ?? NSAttributedString(string: note.text, attributes: FormattingTextView.defaultAttributes)
         textView.textStorage?.setAttributedString(initialBody)
         textView.detectExistingLinks()
+        if let storage = textView.textStorage { checkedLineObserver = FormattingTextView.observeCheckedLines(in: storage) }
         textView.delegate = self
         updateFormatState()
 
@@ -252,22 +255,40 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         }
     }
 
+    /// 울린 알람을 확인한다. 매일 알람은 다음 날 같은 시각으로 넘어가고, 한 번만 울리는 알람은 사라진다.
     func dismissAlarm() {
         isAlarmRinging = false
+        note.alarmDate = note.nextDailyAlarm(after: Date())
+    }
+
+    /// 알람을 아예 없앤다(매일 반복도 끈다).
+    func removeAlarm() {
+        isAlarmRinging = false
         note.alarmDate = nil
+        note.alarmDailyMinutes = nil
     }
 
+    /// 5분 뒤에 다시 울린다. 매일 알람이면 그다음에는 원래 시각으로 돌아간다.
     func snoozeAlarm() {
-        setAlarm(Date().addingTimeInterval(TimeInterval(Self.snoozeMinutes * 60)))
+        isAlarmRinging = false
+        note.alarmDate = Date().addingTimeInterval(TimeInterval(Self.snoozeMinutes * 60))
     }
 
-    /// 새 시각을 걸면 울리던 알람은 멈춘다(다시 알림).
+    /// 한 번만 울리는 알람을 건다. 울리던 알람은 멈춘다.
     func setAlarm(_ date: Date) {
         isAlarmRinging = false
+        note.alarmDailyMinutes = nil
         note.alarmDate = date
     }
 
-    /// 날짜와 시각을 물어 알람을 설정하거나 해제한다.
+    /// 매일 같은 시각에 울리는 알람을 건다.
+    func setDailyAlarm(hour: Int, minute: Int) {
+        isAlarmRinging = false
+        note.alarmDailyMinutes = hour * 60 + minute
+        note.alarmDate = note.nextDailyAlarm(after: Date())
+    }
+
+    /// 날짜와 시각을 물어 알람을 설정하거나 해제한다. "매일 반복"을 켜면 날짜는 무시하고 시각만 쓴다.
     func editAlarm() {
         let now = Date()
         let picker = NSDatePicker()
@@ -276,11 +297,18 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         picker.minDate = now
         picker.dateValue = note.alarmDate.flatMap { $0 > now ? $0 : nil } ?? now.addingTimeInterval(3600)
         picker.sizeToFit()
+        let daily = NSButton(checkboxWithTitle: L("매일 반복"), target: nil, action: nil)
+        daily.state = note.alarmDailyMinutes != nil ? .on : .off
+        let stack = NSStackView(views: [picker, daily])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 8
+        stack.frame.size = stack.fittingSize
 
         let alert = NSAlert()
         alert.messageText = L("알람 설정")
         alert.informativeText = L("지정한 시각에 이 스티커만 앞으로 나타납니다.")
-        alert.accessoryView = picker
+        alert.accessoryView = stack
         alert.addButton(withTitle: L("설정"))
         alert.addButton(withTitle: L("취소"))
         if note.alarmDate != nil { alert.addButton(withTitle: L("알람 해제")) }
@@ -288,10 +316,15 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
 
         switch alert.runModal() {
         case .alertFirstButtonReturn:
-            // 입력란에 초가 없으므로 분의 시작으로 맞춘다.
-            setAlarm(Calendar.current.dateInterval(of: .minute, for: picker.dateValue)?.start ?? picker.dateValue)
+            if daily.state == .on {
+                let c = Calendar.current.dateComponents([.hour, .minute], from: picker.dateValue)
+                setDailyAlarm(hour: c.hour ?? 0, minute: c.minute ?? 0)
+            } else {
+                // 입력란에 초가 없으므로 분의 시작으로 맞춘다.
+                setAlarm(Calendar.current.dateInterval(of: .minute, for: picker.dateValue)?.start ?? picker.dateValue)
+            }
         case .alertThirdButtonReturn:
-            dismissAlarm()
+            removeAlarm()
         default:
             break
         }
@@ -300,6 +333,8 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
     /// 창을 닫고 패널↔뷰↔컨트롤러 순환 참조를 끊는다. 이후 모델 변경은 저장되지 않는다.
     func close() {
         flushBody()
+        checkedLineObserver.map(NotificationCenter.default.removeObserver)
+        checkedLineObserver = nil
         textView.delegate = nil
         panel.delegate = nil
         panel.orderOut(nil)
@@ -813,6 +848,8 @@ struct StickyView: View {
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text(controller.isAlarmRinging
                                  ? settings.dateText(date)
+                                 : controller.note.alarmDailyMinutes != nil
+                                 ? L("매일 %@ · %@ 남음", settings.timeStyle.text(date), remainingText(until: date, from: context.date))
                                  : L("%@에 알람 · %@ 남음", settings.dateText(date), remainingText(until: date, from: context.date)))
                                 .lineLimit(1)
                         }
@@ -821,7 +858,11 @@ struct StickyView: View {
                             Button(L("%d분 후", StickyController.snoozeMinutes)) { controller.snoozeAlarm() }
                                 .help(L("%d분 뒤에 다시 알림", StickyController.snoozeMinutes))
                         }
-                        Button(controller.isAlarmRinging ? L("알람 확인") : L("해제")) { controller.dismissAlarm() }
+                        if controller.isAlarmRinging {
+                            Button(L("알람 확인")) { controller.dismissAlarm() }
+                        } else {
+                            Button(L("해제")) { controller.removeAlarm() }
+                        }
                     }
                     .font(.system(size: 12))
                     .padding(.horizontal, 10)
@@ -878,7 +919,10 @@ struct StickyView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(controller.note.alarmDate.map { L("알람: %@", settings.dateText($0, compact: false)) } ?? L("알람 설정"))
+        .help(controller.note.alarmDate.map { date in
+            controller.note.alarmDailyMinutes != nil ? L("매일 %@ 알람", settings.timeStyle.text(date))
+                                                     : L("알람: %@", settings.dateText(date, compact: false))
+        } ?? L("알람 설정"))
     }
 
     /// 누르면 바로 잠그기·잠금 풀기·다시 잠그기를 한다. 잠금 없애기는 길게 누르거나 팔레트 메뉴에서 한다.
@@ -947,7 +991,7 @@ struct StickyView: View {
         Divider()
         Button(L("날짜와 시각 지정…")) { controller.editAlarm() }
         if controller.note.alarmDate != nil {
-            Button(L("알람 해제")) { controller.dismissAlarm() }
+            Button(L("알람 해제")) { controller.removeAlarm() }
         }
     }
 

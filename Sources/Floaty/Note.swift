@@ -29,8 +29,10 @@ struct Note: Codable, Identifiable, Equatable {
     var modifiedAt = Date()
     /// nil이 아니면 휴지통에 있는 스티커다.
     var deletedAt: Date?
-    /// 알람 시각. 사용자가 확인하면 지운다.
+    /// 다음 알람 시각. 한 번만 울리는 알람은 사용자가 확인하면 지운다.
     var alarmDate: Date?
+    /// 매일 반복하는 알람의 시각(자정부터 분). nil이면 한 번만 울린다.
+    var alarmDailyMinutes: Int?
     /// 잠긴 스티커는 인증하기 전까지 본문을 가린다. 파일은 암호화하지 않는다.
     var isLocked = false
     /// 이 스티커의 투명도. nil이면 설정의 값을 따른다.
@@ -39,6 +41,13 @@ struct Note: Codable, Identifiable, Equatable {
     var footerInfo: FooterInfo?
 
     var isTrashed: Bool { deletedAt != nil }
+
+    /// 매일 알람의 다음 시각.
+    func nextDailyAlarm(after date: Date) -> Date? {
+        guard let minutes = alarmDailyMinutes else { return nil }
+        return Calendar.current.nextDate(after: date, matching: DateComponents(hour: minutes / 60, minute: minutes % 60, second: 0),
+                                         matchingPolicy: .nextTime)
+    }
 
     /// 줄바꿈과 이미지를 뺀 글자수. 띄어쓰기는 센다.
     var characterCount: Int {
@@ -83,6 +92,7 @@ struct Note: Codable, Identifiable, Equatable {
         modifiedAt = try c.decodeIfPresent(Date.self, forKey: .modifiedAt) ?? createdAt
         deletedAt = try c.decodeIfPresent(Date.self, forKey: .deletedAt)
         alarmDate = try c.decodeIfPresent(Date.self, forKey: .alarmDate)
+        alarmDailyMinutes = try c.decodeIfPresent(Int.self, forKey: .alarmDailyMinutes)
         isLocked = try c.decodeIfPresent(Bool.self, forKey: .isLocked) ?? defaults.isLocked
         opacity = try c.decodeIfPresent(Double.self, forKey: .opacity)
         footerInfo = try c.decodeIfPresent(FooterInfo.self, forKey: .footerInfo)

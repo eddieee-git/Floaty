@@ -36,6 +36,10 @@ final class FormattingTextView: NSTextView {
         add(L("체크리스트"), #selector(toggleChecklist(_:)), "l", [.command, .shift])
         add(L("서식 지우기"), #selector(clearFormatting(_:)), "\\")
         menu.addItem(.separator())
+        // ⌘+는 대부분의 자판에서 ⇧를 눌러야 해서 같은 자리의 = 로 받는다.
+        add(L("글자 크게"), #selector(makeTextBigger(_:)), "=")
+        add(L("글자 작게"), #selector(makeTextSmaller(_:)), "-")
+        menu.addItem(.separator())
         add(L("왼쪽 정렬"), #selector(alignLeft(_:)), "{")
         add(L("가운데 정렬"), #selector(alignCenter(_:)), "|")
         add(L("오른쪽 정렬"), #selector(alignRight(_:)), "}")
@@ -244,6 +248,18 @@ final class FormattingTextView: NSTextView {
         changeFonts { NSFontManager.shared.convert($0, toSize: size) }
     }
 
+    /// 크기 목록에서 한 단계씩 키우거나 줄인다. 글자마다 크기가 달라도 각자 한 단계씩 움직인다.
+    @objc func makeTextBigger(_ sender: Any?) { stepFontSize(up: true) }
+    @objc func makeTextSmaller(_ sender: Any?) { stepFontSize(up: false) }
+
+    private func stepFontSize(up: Bool) {
+        changeFonts { font in
+            let size = up ? Self.fontSizes.first { $0 > font.pointSize } ?? font.pointSize
+                          : Self.fontSizes.last { $0 < font.pointSize } ?? font.pointSize
+            return NSFontManager.shared.convert(font, toSize: size)
+        }
+    }
+
     /// nil이면 기본 글자색.
     func setTextColor(_ color: NSColor?) {
         setAttribute(.foregroundColor, color ?? .black)
@@ -428,6 +444,40 @@ final class FormattingTextView: NSTextView {
     private func breakTypingCoalescing() {
         (textStorage?.layoutManagers ?? []).compactMap(\.firstTextView).forEach { $0.breakUndoCoalescing() }
         breakUndoCoalescing()
+    }
+
+    // MARK: 체크된 줄
+
+    /// ☑ 줄의 글자를 흐리게 하고 취소선을 긋는다. 화면에만 입히는 표시라 저장되는 서식과 실행 취소에는 남지 않는다.
+    /// 같은 본문을 쓰는 스티커와 관리 창 편집기 모두에 입힌다.
+    static func styleCheckedLines(in storage: NSTextStorage) {
+        let text = storage.string as NSString
+        let whole = NSRange(location: 0, length: text.length)
+        for layoutManager in storage.layoutManagers {
+            layoutManager.removeTemporaryAttribute(.foregroundColor, forCharacterRange: whole)
+            layoutManager.removeTemporaryAttribute(.strikethroughStyle, forCharacterRange: whole)
+        }
+        guard text.length > 0 else { return }
+        text.enumerateSubstrings(in: whole, options: [.byParagraphs, .substringNotRequired]) { _, paragraph, _, _ in
+            guard paragraph.length > markerLength,
+                  text.substring(with: NSRange(location: paragraph.location, length: markerLength)) == checked else { return }
+            let body = NSRange(location: paragraph.location + markerLength, length: paragraph.length - markerLength)
+            for layoutManager in storage.layoutManagers {
+                layoutManager.addTemporaryAttributes([.foregroundColor: NSColor.secondaryLabelColor,
+                                                      .strikethroughStyle: NSUnderlineStyle.single.rawValue],
+                                                     forCharacterRange: body)
+            }
+        }
+    }
+
+    /// 본문이 바뀔 때마다 체크된 줄 표시를 다시 입힌다. 돌려받은 값을 들고 있는 동안 지켜본다.
+    static func observeCheckedLines(in storage: NSTextStorage) -> NSObjectProtocol {
+        styleCheckedLines(in: storage)
+        return NotificationCenter.default.addObserver(forName: NSTextStorage.didProcessEditingNotification,
+                                                      object: storage, queue: .main) { [weak storage] _ in
+            // 편집이 끝나고 줄 배치가 정해진 뒤에 입힌다.
+            DispatchQueue.main.async { if let storage { styleCheckedLines(in: storage) } }
+        }
     }
 
     // MARK: 링크

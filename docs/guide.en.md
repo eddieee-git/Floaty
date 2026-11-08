@@ -1,6 +1,6 @@
 # User Guide
 
-[← Back to README](../README.md) · [한국어 사용법](guide.md)
+[← Back to README](../README.en.md) · [한국어 사용법](guide.md)
 
 - [Layout](#layout)
 - [Writing notes](#writing-notes)
@@ -50,11 +50,13 @@ Select text, then use the format row buttons or shortcuts. If nothing is selecte
 
 **Clear Formatting** (eraser button, ⌘\\) resets text formatting and alignment. With a selection it clears only the selection; otherwise the whole note. Bullets and images stay, and ⌘Z undoes it.
 
-**Checklist** (checklist button, ⌘⇧L) puts ☐ in front of the selected lines. Click ☐ to check it (☑), click again to uncheck. Press Return on a checklist line to start the next line with an empty ☐; press it again on an empty line to end the list. Press the button again to remove the boxes; on bullet lines it turns them into a checklist.
+**Checklist** (checklist button, ⌘⇧L) puts ☐ in front of the selected lines. Click ☐ to check it (☑); the line turns gray with a strikethrough. Click again to uncheck. Press Return on a checklist line to start the next line with an empty ☐; press it again on an empty line to end the list. Press the button again to remove the boxes; on bullet lines it turns them into a checklist.
 
 **Links** become clickable automatically when you type or paste an address. Click one to open it in your browser.
 
 **Find:** Press ⌘⇧F inside a sticky to show a find bar above the note. ⌘G and ⌘⇧G go to the next and previous match.
+
+**Text size:** ⌘= and ⌘− make the selected text (or what you type next) one size bigger or smaller.
 
 **Images** can be pasted or dropped in. They are shown scaled to the sticky width, but the original is saved.
 
@@ -77,7 +79,7 @@ You can also set shortcuts that collapse or hide just one sticky. See [Keyboard 
 
 ## Alarms
 
-Use the bell button in the bottom row, or **Alarm** in the palette menu, to choose 5, 10, 15, or 30 minutes, 1 hour, or a specific date and time.
+Use the bell button in the bottom row, or **Alarm** in the palette menu, to choose 5, 10, 15, or 30 minutes, 1 hour, or a specific date and time. In **Choose Date and Time…**, turn on **Repeat Daily** to ring at that time every day; dismissing it moves it to the same time tomorrow.
 
 When the time comes, the sticky comes to the front, plays a sound, and flashes until you click anywhere on it or click **Dismiss Alarm**. While it rings, **In 5 Minutes** reminds you again in five minutes; you can also pick another time from **Alarm** in the palette menu. Alarms that pass while the app is not running ring the next time it starts.
 
@@ -151,6 +153,7 @@ The **current sticky** is the one you last clicked or typed in. Right after the 
 | Checklist | ⌘⇧L | Find in Sticky | ⌘⇧F (next ⌘G) |
 | Paste Without Formatting | ⌥⇧⌘V | Manage Stickies (search) | ⌘F |
 | Duplicate | ⌘D | Save to File | ⌘S |
+| Bigger / Smaller text | ⌘= / ⌘− | | |
 | Print | ⌘P | Undo | ⌘Z |
 
 ## Settings
@@ -172,7 +175,7 @@ Open with menu bar icon → **Settings…**.
 There is no Dock icon. Look at the menu bar at the top of the screen. If the menu bar is crowded, the icon may be hidden.
 
 **A warning appears the first time I open it.**
-See the [installation guide](install.md#처음-실행할-때-나오는-보안-경고) (Korean). In short: close the warning, then go to **System Settings → Privacy & Security** and click **Open Anyway** near the bottom. You only need to do this once.
+See the [installation guide](install.en.md#the-security-warning-on-first-launch).
 
 **A shortcut won't record.**
 Check the red message at the bottom of the window. A key used by another item, or a key without ⌘, ⌃, or ⌥, can't be assigned. If nothing happens at all, macOS or another app may already use that combination; try a different one.
@@ -181,4 +184,4 @@ Check the red message at the bottom of the window. A key used by another item, o
 Sound files aren't copied; Floaty remembers where they are. If you move or delete the file, the default sound is used.
 
 **Where are stickies stored?**
-In `~/Library/Application Support/Floaty`. The [installation guide](install.md#다른-mac으로-옮기기) (Korean) explains how to move them to another Mac.
+In `~/Library/Application Support/Floaty`. The [installation guide](install.en.md#moving-to-another-mac) explains how to move them to another Mac.

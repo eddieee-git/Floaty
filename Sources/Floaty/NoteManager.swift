@@ -232,6 +232,7 @@ final class NoteEditor: NSObject, ObservableObject, NSTextViewDelegate {
         textView.textContainerInset = NSSize(width: 8, height: 8)
         textView.delegate = self
         updateFormatState()
+        FormattingTextView.styleCheckedLines(in: storage)
     }
 
     func detach() {
@@ -514,7 +515,10 @@ private struct ActiveNoteDetail: View {
                 items.append(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
             }
         }
-        if let alarm = note.alarmDate { items.append(L("알람 %@", settings.dateText(alarm, compact: false))) }
+        if let alarm = note.alarmDate {
+            items.append(note.alarmDailyMinutes != nil ? L("매일 %@ 알람", settings.timeStyle.text(alarm))
+                                                       : L("알람 %@", settings.dateText(alarm, compact: false)))
+        }
         if note.isLocked { items.append(L("잠금")) }
         return items
     }

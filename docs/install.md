@@ -1,6 +1,6 @@
 # 설치 안내
 
-[← README로 돌아가기](../README.md)
+[← README로 돌아가기](../README.md) · [English](install.en.md)
 
 ## 요구 사항
 

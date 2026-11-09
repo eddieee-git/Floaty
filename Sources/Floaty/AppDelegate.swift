@@ -165,7 +165,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openReleases() {
-        NSWorkspace.shared.open(URL(string: "https://github.com/eddieee-git/Floaty/releases")!)
+        NSWorkspace.shared.open(URL(string: "https://github.com/eddieee-git/mac-app-Floaty/releases")!)
     }
 
     @objc private func showBackups() {

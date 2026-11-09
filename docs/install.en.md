@@ -9,7 +9,7 @@
 
 ## Installing
 
-1. Download `Floaty.dmg` from [Releases](https://github.com/eddieee-git/Floaty/releases).
+1. Download `Floaty.dmg` from [Releases](https://github.com/eddieee-git/mac-app-Floaty/releases).
 2. Open the dmg and drag Floaty to the Applications folder.
 3. Eject the dmg.
 4. Open Floaty from the Applications folder.

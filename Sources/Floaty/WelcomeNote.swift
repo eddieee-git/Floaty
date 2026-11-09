@@ -2,8 +2,8 @@ import AppKit
 
 /// 처음 설치했을 때 띄우는 안내 스티커. 처음 1분 안에 필요한 것만 담고, 자세한 내용은 사용법 페이지로 보낸다.
 enum WelcomeNote {
-    static let guideURL = URL(string: "https://github.com/eddieee-git/Floaty/blob/main/docs/guide.md")!
-    static let englishGuideURL = URL(string: "https://github.com/eddieee-git/Floaty/blob/main/docs/guide.en.md")!
+    static let guideURL = URL(string: "https://github.com/eddieee-git/mac-app-Floaty/blob/main/docs/guide.md")!
+    static let englishGuideURL = URL(string: "https://github.com/eddieee-git/mac-app-Floaty/blob/main/docs/guide.en.md")!
 
     /// 단축키는 지금 설정된 값으로 보여 준다. 지정되지 않았으면 그 줄을 메뉴 이름으로 대신한다.
     static func make(hotKeys: [String: KeyCombo]) -> (title: String, body: NSAttributedString) {

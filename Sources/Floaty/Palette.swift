@@ -43,6 +43,21 @@ enum Palette {
         return body.blended(withFraction: isDark ? 0.12 : 0.08, of: isDark ? .white : .black) ?? body
     }
 
+    /// 메뉴에 넣는 색 동그라미. 그릴 때의 테마(라이트·다크)에 맞는 색으로 그린다.
+    static func swatch(_ index: Int, size: CGFloat = 12) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            let circle = NSBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5))
+            color(index).setFill()
+            circle.fill()
+            NSColor.black.withAlphaComponent(0.25).setStroke()
+            circle.lineWidth = 0.5
+            circle.stroke()
+            return true
+        }
+        image.isTemplate = false
+        return image
+    }
+
     static func hex(of color: NSColor) -> Int? {
         guard let c = color.usingColorSpace(.sRGB) else { return nil }
         func byte(_ value: CGFloat) -> Int { Int((min(max(value, 0), 1) * 255).rounded()) }

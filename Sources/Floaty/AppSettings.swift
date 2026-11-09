@@ -55,6 +55,7 @@ final class AppSettings: ObservableObject {
         static let hotKeys = "hotKeys"
         static let theme = "theme"
         static let soundEffects = "soundEffects"
+        static let alarmNotifications = "alarmNotifications"
         static let sounds = "sounds"
         // 삭제 확인 대화상자의 "다시 묻지 않기"가 이 키에 저장된다.
         static let skipTrashConfirmation = "skipTrashConfirmation"
@@ -128,6 +129,13 @@ final class AppSettings: ObservableObject {
             SoundEffect.choices = sounds
         }
     }
+    /// 알람이 울릴 때 알림 센터에도 남긴다. 기본은 켬.
+    @Published var alarmNotifications: Bool {
+        didSet {
+            defaults.set(alarmNotifications, forKey: Keys.alarmNotifications)
+            if alarmNotifications { AlarmNotifier.requestPermissionIfNeeded() }
+        }
+    }
     @Published var soundEffects: Bool {
         didSet {
             defaults.set(soundEffects, forKey: Keys.soundEffects)
@@ -141,6 +149,13 @@ final class AppSettings: ObservableObject {
     @Published var confirmTrash: Bool { didSet { defaults.set(!confirmTrash, forKey: Keys.skipTrashConfirmation) } }
     /// 휴지통에서 `NoteStore.trashRetentionDays`일이 지난 스티커를 저절로 지운다. 기본은 켬.
     @Published var autoEmptyTrash: Bool { didSet { defaults.set(autoEmptyTrash, forKey: Keys.autoEmptyTrash) } }
+
+    /// 이 Mac에서 Floaty를 쓴 적이 있다(스티커 목록 파일이 있다).
+    private static var hasExistingNotes: Bool {
+        let file = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Floaty/notes.json")
+        return FileManager.default.fileExists(atPath: file.path)
+    }
 
     init() {
         Self.moveDefaultsToBundle()
@@ -175,6 +190,11 @@ final class AppSettings: ObservableObject {
         theme = defaults.string(forKey: Keys.theme).flatMap(Theme.init) ?? .system
         sounds = defaults.dictionary(forKey: Keys.sounds) as? [String: String] ?? [:]
         soundEffects = defaults.object(forKey: Keys.soundEffects) as? Bool ?? false
+        alarmNotifications = defaults.object(forKey: Keys.alarmNotifications) as? Bool ?? true
+        // 지운 직후 되돌리기 알림이 뜨므로 새로 설치하면 확인 창 없이 시작한다. 이미 쓰던 사람은 그동안의 설정(확인함)을 지킨다.
+        if defaults.object(forKey: Keys.skipTrashConfirmation) == nil {
+            defaults.set(!Self.hasExistingNotes, forKey: Keys.skipTrashConfirmation)
+        }
         confirmTrash = !defaults.bool(forKey: Keys.skipTrashConfirmation)
         autoEmptyTrash = defaults.object(forKey: Keys.autoEmptyTrash) as? Bool ?? true
         SoundEffect.isEnabled = soundEffects

@@ -102,6 +102,8 @@ struct SettingsView: View {
         Form {
             Section {
                 Toggle(L("효과음 켜기 (알람 소리는 항상 납니다)"), isOn: $settings.soundEffects)
+                Toggle(L("알람을 알림 센터에도 보내기"), isOn: $settings.alarmNotifications)
+                    .help(L("화면을 보고 있지 않았어도 알림 목록에서 확인할 수 있습니다. 처음 한 번 알림 권한을 묻습니다."))
                 SoundEditor(settings: settings)
             }
         }

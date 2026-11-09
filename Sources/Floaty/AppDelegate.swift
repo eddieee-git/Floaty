@@ -1,8 +1,9 @@
 import AppKit
 import Carbon
 import Combine
+import UserNotifications
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotificationCenterDelegate {
     private let store = NoteStore()
     private var controllers: [UUID: StickyController] = [:]
     private var statusItem: NSStatusItem?
@@ -108,6 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self, selector: #selector(relockAll), name: Notification.Name("com.apple.screenIsLocked"), object: nil)
         // 메뉴바 앱이라 처음 설치했을 때만 안내 스티커로 실행된 것을 알린다. 그 뒤로는 있던 그대로 띄운다.
         store.reconcileEncryption()
+        if AlarmNotifier.isAvailable { UNUserNotificationCenter.current().delegate = self }
         reportLoadProblem()
         purgeTrashIfNeeded()
         store.backupIfNeeded()
@@ -162,6 +164,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if alert.runModal() == .alertSecondButtonReturn, let reveal {
             NSWorkspace.shared.activateFileViewerSelecting([reveal])
         }
+    }
+
+    @objc private func focusNextSticky() { cycleStickies(by: 1) }
+    @objc private func focusPreviousSticky() { cycleStickies(by: -1) }
+
+    /// 화면에 보이는 스티커를 만든 순서로 돌며 다음 것을 앞으로 가져와 입력할 수 있게 한다.
+    private func cycleStickies(by step: Int) {
+        let visible = controllers.values.filter { $0.panel.isVisible }.sorted { $0.note.createdAt < $1.note.createdAt }
+        guard !visible.isEmpty else { return }
+        let current = visible.firstIndex { $0.panel.isKeyWindow } ?? (step > 0 ? -1 : 0)
+        let next = visible[(current + step + visible.count) % visible.count]
+        next.panel.makeKeyAndOrderFront(nil)
+        if !next.isContentHidden && !next.note.isCollapsed { next.panel.makeFirstResponder(next.textView) }
     }
 
     @objc private func openReleases() {
@@ -223,6 +238,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         main.addItem(withTitle: L("서식"), action: nil, keyEquivalent: "").submenu =
             FormattingTextView.makeFormatMenu(target: nil)
+
+        // 보이는 스티커 사이를 키보드로 옮겨 다닌다. 다른 Mac 앱에서 창을 넘기는 키와 같다.
+        let window = NSMenu(title: L("윈도우"))
+        window.addItem(withTitle: L("다음 스티커"), action: #selector(focusNextSticky), keyEquivalent: "`").target = self
+        window.addItem(withTitle: L("이전 스티커"), action: #selector(focusPreviousSticky), keyEquivalent: "`")
+            .keyEquivalentModifierMask = [.command, .shift]
+        window.items.last?.target = self
+        main.addItem(withTitle: L("윈도우"), action: nil, keyEquivalent: "").submenu = window
         NSApp.mainMenu = main
     }
 
@@ -312,6 +335,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateHotKeyItems(settings.hotKeys)
     }
 
+    /// 메뉴바 아이콘을 ⌥를 누른 채 클릭하면 메뉴 대신 바로 새 스티커를 만든다.
+    func menuWillOpen(_ menu: NSMenu) {
+        guard menu === statusMenu, NSEvent.modifierFlags.contains(.option) else { return }
+        menu.cancelTrackingWithoutAnimation()
+        DispatchQueue.main.async { self.newNote() }
+    }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
         if menu === statusMenu {
             relockItem?.isHidden = !controllers.values.contains { $0.note.isLocked }
@@ -335,6 +365,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // 체크 = 화면에 보이는 스티커
             item.state = controllers[note.id]?.panel.isVisible == true ? .on : .off
         }
+    }
+
+    /// 알람 알림을 누르면 그 스티커를 앞으로 가져온다.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        if let id = UUID(uuidString: response.notification.request.identifier) {
+            DispatchQueue.main.async { self.reveal(id) }
+        }
+        completionHandler()
+    }
+
+    /// 앱이 앞에 있어도 배너를 띄워 알림 목록에 남긴다.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list])
     }
 
     @objc private func showNote(_ sender: NSMenuItem) {
@@ -451,6 +496,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             onDuplicate: { [weak self] id in self?.duplicate(id) }
         )
         controllers[note.id] = controller
+        controller.otherStickyFrames = { [weak self, weak controller] in
+            guard let self else { return [] }
+            return self.controllers.values.filter { $0 !== controller && $0.panel.isVisible }.map(\.panel.frame)
+        }
         controller.ensureOnScreen()
         if !note.isHidden && !note.isHiddenWithAll { controller.panel.orderFrontRegardless() }
     }

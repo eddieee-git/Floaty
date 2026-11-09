@@ -244,6 +244,10 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         show()
         note.isCollapsed = false
         playAlarmSound()
+        if settings.alarmNotifications {
+            // 잠긴 스티커는 본문 첫 줄이 드러나지 않게 제목이나 "(잠긴 스티커)"만 쓴다.
+            AlarmNotifier.post(noteID: note.id, title: note.displayTitle, body: L("알람 %@", settings.dateText(date)))
+        }
     }
 
     /// 소리를 3번 낸다. 도중에 확인하면 남은 소리는 내지 않는다.
@@ -276,6 +280,7 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
 
     /// 한 번만 울리는 알람을 건다. 울리던 알람은 멈춘다.
     func setAlarm(_ date: Date) {
+        if settings.alarmNotifications { AlarmNotifier.requestPermissionIfNeeded() }
         isAlarmRinging = false
         note.alarmDailyMinutes = nil
         note.alarmDate = date
@@ -283,6 +288,7 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
 
     /// 매일 같은 시각에 울리는 알람을 건다.
     func setDailyAlarm(hour: Int, minute: Int) {
+        if settings.alarmNotifications { AlarmNotifier.requestPermissionIfNeeded() }
         isAlarmRinging = false
         note.alarmDailyMinutes = hour * 60 + minute
         note.alarmDate = note.nextDailyAlarm(after: Date())
@@ -477,7 +483,32 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
 
     // MARK: NSWindowDelegate
 
-    func windowDidMove(_ notification: Notification) { syncFrame() }
+    func windowDidMove(_ notification: Notification) {
+        syncFrame()
+        scheduleSnap()
+    }
+
+    /// 다른 스티커의 창 위치. 끌어 놓을 때 맞춰 붙는 데 쓴다.
+    var otherStickyFrames: () -> [NSRect] = { [] }
+    private var snapWork: DispatchWorkItem?
+
+    /// 마우스를 놓은 뒤에 한 번 맞춰 붙인다. 앱을 켤 때나 화면 밖에서 들여올 때처럼 코드로 옮긴 것은 건드리지 않는다.
+    private func scheduleSnap() {
+        snapWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.snapAfterDrag() }
+        snapWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: work)
+    }
+
+    private func snapAfterDrag() {
+        guard panel.sizeAtMouseDown != nil else { return }
+        if NSEvent.pressedMouseButtons & 1 != 0 { return scheduleSnap() } // 아직 끄는 중
+        guard panel.takeSizeAtMouseDown() == panel.frame.size,
+              let screen = (panel.screen ?? NSScreen.main)?.visibleFrame else { return }
+        let origin = StickySnap.snapped(panel.frame, screen: screen, others: otherStickyFrames())
+        guard origin != panel.frame.origin else { return }
+        panel.setFrame(NSRect(origin: origin, size: panel.frame.size), display: true, animate: true)
+    }
 
     func windowDidResize(_ notification: Notification) {
         syncFrame()
@@ -800,9 +831,7 @@ struct StickyView: View {
                 Menu {
                     Button(L("제목 변경")) { startEditingTitle() }
                     Divider()
-                    ForEach(Palette.colors.indices, id: \.self) { i in
-                        Button(L(Palette.colors[i].name)) { controller.note.colorIndex = i }
-                    }
+                    PaletteMenuItems(selected: controller.note.colorIndex) { controller.note.colorIndex = $0 }
                     Divider()
                     Menu(L("알람")) { alarmItems }
                     Button(L("복제")) { controller.duplicateNote(nil) }

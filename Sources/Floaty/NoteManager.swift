@@ -75,7 +75,10 @@ final class NoteManagerModel: ObservableObject {
     }
     @Published var sort: NoteSort = .modified
     @Published var query = "" {
-        didSet { keepSelectionVisible() }
+        didSet {
+            keepSelectionVisible()
+            editor?.highlight(trimmedQuery)
+        }
     }
     @Published var selection = Set<UUID>()
     @Published var searchFocusRequest = 0
@@ -129,6 +132,7 @@ final class NoteManagerModel: ObservableObject {
         editor?.detach()
         let made = NoteEditor(controller: controller)
         editor = made
+        made.highlight(trimmedQuery)
         if focusOnOpen == controller.note.id {
             focusOnOpen = nil
             DispatchQueue.main.async { made.focus() }
@@ -262,6 +266,30 @@ final class NoteEditor: NSObject, ObservableObject, NSTextViewDelegate {
     func textDidChange(_ notification: Notification) {
         updateFormatState()
         controller?.bodyDidChange()
+        highlight(highlightedQuery)
+    }
+
+    private var highlightedQuery = ""
+
+    /// 검색어와 맞는 곳을 이 편집기에만 형광으로 보여 주고 첫 곳으로 넘긴다. 스티커와 저장 서식은 바뀌지 않는다.
+    func highlight(_ query: String) {
+        let scroll = query != highlightedQuery
+        highlightedQuery = query
+        let text = storage.string as NSString
+        let whole = NSRange(location: 0, length: text.length)
+        layoutManager.removeTemporaryAttribute(.backgroundColor, forCharacterRange: whole)
+        guard !query.isEmpty, controller?.isContentHidden != true else { return }
+        var first: NSRange?
+        var searchRange = whole
+        while true {
+            let found = text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive], range: searchRange)
+            guard found.location != NSNotFound, found.length > 0 else { break }
+            layoutManager.addTemporaryAttribute(.backgroundColor, value: NSColor.systemYellow.withAlphaComponent(0.55),
+                                                forCharacterRange: found)
+            if first == nil { first = found }
+            searchRange = NSRange(location: found.upperBound, length: whole.upperBound - found.upperBound)
+        }
+        if scroll, let first { textView.scrollRangeToVisible(first) }
     }
 
     /// 관리 창은 여러 메모를 번갈아 열므로, 창의 실행 취소 기록을 쓰면 ⌘Z가 다른 메모를 되돌린다.
@@ -377,7 +405,7 @@ private struct NoteSidebar: View {
 
             List(notes, selection: $model.selection) { note in
                 NoteRow(note: note, date: model.filter == .trash ? note.deletedAt ?? note.modifiedAt : note.modifiedAt,
-                        settings: settings)
+                        query: model.query.trimmingCharacters(in: .whitespaces), settings: settings)
             }
             // 검색어나 보기가 바뀌면 줄을 하나씩 고치지 않고 목록을 새로 만든다. 줄 수가 크게 바뀔 때
             // SwiftUI 목록이 표를 고치는 도중에 다시 불려 macOS가 경고하는 것을 피한다. 선택은 모델에 있어 그대로 남는다.
@@ -425,6 +453,7 @@ private struct NoteSidebar: View {
 private struct NoteRow: View {
     let note: Note
     let date: Date
+    let query: String
     @ObservedObject var settings: AppSettings
 
     var body: some View {
@@ -434,7 +463,11 @@ private struct NoteRow: View {
                 .overlay(Circle().stroke(Color.primary.opacity(0.2), lineWidth: 0.5))
                 .frame(width: 10, height: 10)
             VStack(alignment: .leading, spacing: 2) {
-                Text(note.displayTitle).lineLimit(1)
+                highlighted(note.displayTitle).lineLimit(1)
+                // 제목이 아니라 본문에서 찾았으면 찾은 곳 둘레를 한 줄 보여 준다.
+                if let snippet {
+                    highlighted(snippet).font(.caption).lineLimit(1)
+                }
                 HStack(spacing: 4) {
                     Text(settings.dateText(date))
                     if note.isHidden { Image(systemName: "eye.slash").help(L("숨긴 스티커")) }
@@ -447,6 +480,34 @@ private struct NoteRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+extension NoteRow {
+    /// 검색어가 든 부분에 형광을 칠한 글.
+    func highlighted(_ text: String) -> Text {
+        var attributed = AttributedString(text)
+        guard !query.isEmpty else { return Text(attributed) }
+        var start = text.startIndex
+        while let found = text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive], range: start..<text.endIndex) {
+            if let lower = AttributedString.Index(found.lowerBound, within: attributed),
+               let upper = AttributedString.Index(found.upperBound, within: attributed) {
+                attributed[lower..<upper].backgroundColor = .yellow.opacity(0.55)
+            }
+            start = found.upperBound
+        }
+        return Text(attributed)
+    }
+
+    /// 본문에서만 찾았을 때 보여 줄 앞뒤 몇 글자. 잠긴 메모는 보여 주지 않는다.
+    var snippet: String? {
+        guard !query.isEmpty, !note.isLocked,
+              note.displayTitle.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) == nil,
+              let found = note.text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) else { return nil }
+        let lower = note.text.index(found.lowerBound, offsetBy: -12, limitedBy: note.text.startIndex) ?? note.text.startIndex
+        let upper = note.text.index(found.upperBound, offsetBy: 30, limitedBy: note.text.endIndex) ?? note.text.endIndex
+        let piece = note.text[lower..<upper].replacingOccurrences(of: "\n", with: " ")
+        return (lower > note.text.startIndex ? "…" : "") + piece
     }
 }
 
@@ -614,17 +675,7 @@ extension MultipleSelectionDetail {
     var colorMenu: some View {
         let colors = Set(ids.compactMap(model.note).map(\.colorIndex))
         return Menu(L("색")) {
-            ForEach(Palette.colors.indices, id: \.self) { i in
-                Button {
-                    model.setColor(i, ids)
-                } label: {
-                    if colors == [i] {
-                        Label(L(Palette.colors[i].name), systemImage: "checkmark")
-                    } else {
-                        Text(L(Palette.colors[i].name))
-                    }
-                }
-            }
+            PaletteMenuItems(selected: colors.count == 1 ? colors.first : nil) { model.setColor($0, ids) }
         }
         .fixedSize()
         .help(L("고른 스티커의 색을 한 번에 바꿉니다"))
@@ -636,17 +687,7 @@ private struct ColorMenu: View {
 
     var body: some View {
         Menu {
-            ForEach(Palette.colors.indices, id: \.self) { i in
-                Button {
-                    index = i
-                } label: {
-                    if i == index {
-                        Label(L(Palette.colors[i].name), systemImage: "checkmark")
-                    } else {
-                        Text(L(Palette.colors[i].name))
-                    }
-                }
-            }
+            PaletteMenuItems(selected: index) { index = $0 }
         } label: {
             Circle()
                 .fill(Color(nsColor: Palette.color(index)))

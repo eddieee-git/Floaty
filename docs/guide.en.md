@@ -17,7 +17,7 @@ The screenshots show the Korean interface. Switch the app to English in **Settin
 
 ## Layout
 
-Click the **menu bar icon** to open this menu.
+Click the **menu bar icon** to open this menu. Hold ⌥ while clicking to create a new sticky right away instead.
 
 | Group | Items |
 |---|---|
@@ -34,11 +34,12 @@ A **sticky** has three rows.
 | Format row | Font, size, text color, highlight, clear formatting, text style, bullets, checklist, alignment |
 | Bottom row | Opacity, modified time or character count, alarm, lock |
 
-- **Move:** Drag the title row.
+- **Move:** Drag the title row. When you let go within 10 pt of a screen edge or another sticky, it snaps into line (with an 8 pt gap when placed side by side).
+- **Switch stickies:** In a sticky, press ⌘\` for the next sticky or ⌘⇧\` for the previous one, ready to type.
 - **Resize:** Drag the edges.
 - **Multiple displays:** New stickies open near the middle of the display the pointer is on. Stickies move freely between displays and can sit across two. If a sticky ends up off screen, for example when you unplug an external display from a MacBook, it moves onto a remaining display (collapsed stickies stay collapsed).
 - **Always on top:** The pin button keeps a sticky above other apps, or lets it fall behind like a normal window.
-- **Color and title:** Pick a color from the palette button. Click the title of the sticky in front to rename it, or use **Rename** in the palette menu. If the title is empty, the first line of the note is used (without bullets or checkboxes).
+- **Color and title:** Pick a color from the palette button; each color has a swatch, and the current one is checked. Click the title of the sticky in front to rename it, or use **Rename** in the palette menu. If the title is empty, the first line of the note is used (without bullets or checkboxes).
 - **Duplicate:** **Duplicate** (⌘D) in the palette menu copies formatting and images too.
 - **Bottom row display:** Double-click the modified time or character count to switch between them. Hover for details.
 
@@ -81,7 +82,7 @@ You can also set shortcuts that collapse or hide just one sticky. See [Keyboard 
 
 Use the bell button in the bottom row, or **Alarm** in the palette menu, to choose 5, 10, 15, or 30 minutes, 1 hour, or a specific date and time. In **Choose Date and Time…**, turn on **Repeat Daily** to ring at that time every day; dismissing it moves it to the same time tomorrow.
 
-When the time comes, the sticky comes to the front, plays a sound, and flashes until you click anywhere on it or click **Dismiss Alarm**. While it rings, **In 5 Minutes** reminds you again in five minutes; you can also pick another time from **Alarm** in the palette menu. Alarms that pass while the app is not running ring the next time it starts.
+When the time comes, the sticky comes to the front, plays a sound, also posts to Notification Center (Floaty asks for permission the first time you set an alarm; clicking the notification brings the sticky forward; turn it off in Settings → Sounds), and flashes until you click anywhere on it or click **Dismiss Alarm**. While it rings, **In 5 Minutes** reminds you again in five minutes; you can also pick another time from **Alarm** in the palette menu. Alarms that pass while the app is not running ring the next time it starts.
 
 ## Locking
 
@@ -103,7 +104,7 @@ Open it with **Manage Stickies…** in the menu bar, or press ⌘F in a sticky. 
 <img src="images/manager.png" width="680" alt="Manage Stickies window">
 
 - **Views:** Choose **All**, **Visible**, **Hidden**, or **Trash** at the top. While everything is hidden with ⌃⌘H, a **All hidden** notice with a **Show Again** button appears above the list.
-- **Search and sort:** The search field matches titles and note text. Locked notes match by title only. Sort by modified date, created date, or title.
+- **Search and sort:** The search field matches titles and note text. Matches are highlighted in the list and the editor, and when only the note text matches, the list shows that part on one line. Locked notes match by title only. Sort by modified date, created date, or title.
 - **Editing:** The editor on the right shares the text with the sticky; changes show up in both immediately. You can also change the title, color, and always-on-top here.
 - **Use it like a notepad:** The pencil button (⌘N in this window) creates a hidden sticky that stays out of the way and is edited only here. Turn off **Hide** to show it as a sticky; turn it on to hide it again.
 - **Show Sticky:** Unhides and expands the sticky and brings it to the front. Double-clicking it in the list does the same.
@@ -111,7 +112,7 @@ Open it with **Manage Stickies…** in the menu bar, or press ⌘F in a sticky. 
 
 ### Trash
 
-Deleted stickies go to the Trash. Empty stickies are deleted without asking. When you delete one with content, an **Undo** notice appears where it was for six seconds; click it to bring the sticky back in the same place. In the **Trash** view you can read notes, **Restore** them (or double-click), or **Delete Permanently**. **Empty Trash** is below the list. Notes in the Trash can't be edited; restore them first. Notes are deleted automatically 30 days after they go to the Trash (you can turn this off in Settings → General). Permanent deletion can't be undone.
+Deleted stickies go to the Trash. A new installation deletes without asking and shows Undo instead (turn on **Confirm before deleting** in Settings → General if you prefer). Empty stickies are deleted without asking. When you delete one with content, an **Undo** notice appears where it was for six seconds; click it to bring the sticky back in the same place. In the **Trash** view you can read notes, **Restore** them (or double-click), or **Delete Permanently**. **Empty Trash** is below the list. Notes in the Trash can't be edited; restore them first. Notes are deleted automatically 30 days after they go to the Trash (you can turn this off in Settings → General). Permanent deletion can't be undone.
 
 Select several notes with ⌘ or ⇧ to show, hide, move to Trash, or change the color of all of them at once. In the Trash, you can restore or permanently delete several at once.
 
@@ -158,6 +159,7 @@ The **current sticky** is the one you last clicked or typed in. Right after the 
 | Underline | ⌘U | Center | ⌘\| |
 | Strikethrough | ⌘⇧X | Align Right | ⌘} |
 | Clear Formatting | ⌘\\ | Fonts window | ⌘T |
+| Next / Previous Sticky | ⌘\` / ⌘⇧\` | | |
 | Checklist | ⌘⇧L | Find in Sticky | ⌘⇧F (next ⌘G) |
 | Paste Without Formatting | ⌥⇧⌘V | Manage Stickies (search) | ⌘F |
 | Duplicate | ⌘D | Save to File | ⌘S |
@@ -174,7 +176,7 @@ Open with menu bar icon → **Settings…**.
 | Stickies | Default size, font, text size, always on top, and color (random or fixed) for new stickies. Opacity and bottom-row display for all stickies |
 | Date | Date, year, weekday, and time formats. Changing the language also switches language-specific formats, such as "Fri" and "3:05 PM" |
 | Colors | Title row and background colors for the 10 colors, set separately for light and dark |
-| Sounds | Sound effects (off by default; alarm sounds always play) and a sound for each action: a system sound, none, or your own sound file |
+| Sounds | Sound effects (off by default; alarm sounds always play), send alarms to Notification Center (on by default) and a sound for each action: a system sound, none, or your own sound file |
 | Shortcuts | Global shortcuts |
 
 ## FAQ

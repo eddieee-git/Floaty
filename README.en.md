@@ -23,7 +23,7 @@ Keep notes floating above other apps, and hide them all with one shortcut when y
 - **Customize:** 10 colors, light and dark themes, date formats, and sound effects per action.
 - **Korean and English:** Choose the language in Settings. It follows your Mac's language at first.
 
-For a countdown timer and daily alarm clock with a flip-clock look, see the companion app [Clocky](https://github.com/eddieee-git/Clocky).
+For a countdown timer and daily alarm clock with a flip-clock look, see the companion app [Clocky](https://github.com/eddieee-git/mac-app-clocky).
 
 ## Requirements
 

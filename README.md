@@ -23,7 +23,7 @@
 - **꾸미기:** 10가지 색, 라이트·다크 테마, 날짜 표기 방식, 동작별 효과음을 고릅니다.
 - **한국어·영어:** 설정에서 화면 언어를 고릅니다. 처음에는 Mac의 언어를 따릅니다.
 
-넘김시계 모양의 타이머와 매일 알람은 짝꿍 앱 [Clocky](https://github.com/eddieee-git/Clocky)에 있습니다.
+넘김시계 모양의 타이머와 매일 알람은 짝꿍 앱 [Clocky](https://github.com/eddieee-git/mac-app-clocky)에 있습니다.
 
 ## 요구 사항
 

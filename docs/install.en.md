@@ -85,3 +85,9 @@ To delete the settings too, run:
 ```bash
 defaults delete com.eddieee.Floaty
 ```
+
+If you ever locked a note, the lock key is still in your keychain. Remove it with the command below. Once it is gone, any remaining locked notes can't be opened, so run it only after deleting your stickies.
+
+```bash
+security delete-generic-password -s com.eddieee.Floaty
+```

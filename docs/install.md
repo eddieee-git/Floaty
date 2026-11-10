@@ -85,3 +85,9 @@ rm -rf ~/Library/Application\ Support/Floaty
 ```bash
 defaults delete com.eddieee.Floaty
 ```
+
+잠금을 쓴 적이 있다면 키체인에 잠금용 키가 남아 있습니다. 아래 명령으로 지웁니다. 이 키를 지우면 남아 있는 잠긴 메모는 다시 열 수 없으니, 스티커를 지운 뒤에만 실행하세요.
+
+```bash
+security delete-generic-password -s com.eddieee.Floaty
+```

@@ -41,7 +41,7 @@ For a countdown timer and daily alarm clock with a flip-clock look, see the comp
 >
 > Close the warning, then go to **System Settings → Privacy & Security** and click **Open Anyway** near the bottom. You only need to do this once.
 
-See the [installation guide](docs/install.en.md) for details, updating, and uninstalling.
+See the [installation guide](docs/install.en.md) for details, updating, and uninstalling. What changed in each version is in the [changelog](CHANGELOG.en.md).
 
 ## Getting started
 

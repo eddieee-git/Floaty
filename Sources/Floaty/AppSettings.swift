@@ -53,6 +53,7 @@ final class AppSettings: ObservableObject {
         static let timeStyle = "timeStyle"
         static let timeOnlyToday = "timeOnlyToday"
         static let hotKeys = "hotKeys"
+        static let renameTitleKey = "renameTitleKey"
         static let theme = "theme"
         static let soundEffects = "soundEffects"
         static let alarmNotifications = "alarmNotifications"
@@ -103,6 +104,10 @@ final class AppSettings: ObservableObject {
     /// 전역 단축키. 키는 `HotKeyAction.rawValue`이고, 없는 동작은 단축키를 쓰지 않는다.
     @Published var hotKeys: [String: KeyCombo] {
         didSet { defaults.set(try? JSONEncoder().encode(hotKeys), forKey: Keys.hotKeys) }
+    }
+    /// 스티커 안에서 제목을 고치는 단축키. 전역이 아니라 앞에 있는 스티커에서만 동작한다. 지우면 nil(빈 데이터로 저장).
+    @Published var renameTitleKey: KeyCombo? {
+        didSet { defaults.set(renameTitleKey.flatMap { try? JSONEncoder().encode($0) } ?? Data(), forKey: Keys.renameTitleKey) }
     }
     /// 단축키를 입력받는 동안에는 눌러도 동작하지 않게 등록을 풀어 둔다.
     @Published var isRecordingHotKey = false
@@ -186,6 +191,7 @@ final class AppSettings: ObservableObject {
         timeStyle = defaults.string(forKey: Keys.timeStyle).flatMap(TimeStyle.init) ?? (isKorean ? .koreanMeridiem : .englishMeridiem)
         timeOnlyToday = defaults.object(forKey: Keys.timeOnlyToday) as? Bool ?? true
         hotKeys = defaults.data(forKey: Keys.hotKeys).flatMap { try? JSONDecoder().decode([String: KeyCombo].self, from: $0) }.map(KeyCombo.migrated) ?? KeyCombo.defaults
+        renameTitleKey = defaults.data(forKey: Keys.renameTitleKey).map { try? JSONDecoder().decode(KeyCombo.self, from: $0) } ?? KeyCombo.renameDefault
         language = Localization.language
         theme = defaults.string(forKey: Keys.theme).flatMap(Theme.init) ?? .system
         sounds = defaults.dictionary(forKey: Keys.sounds) as? [String: String] ?? [:]

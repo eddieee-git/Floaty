@@ -21,7 +21,7 @@ Click the **menu bar icon** to open this menu. Hold ⌥ while clicking to create
 
 | Group | Items |
 |---|---|
-| Create and find | New Sticky, Manage Stickies…, Stickies ▸ (every sticky; visible ones are checked) |
+| Create and find | New Sticky, Manage Stickies…, Manage Trash…, Stickies ▸ (every sticky; visible ones are checked) |
 | All stickies | Show/Hide All, Collapse/Expand All, Lock All Again (only when a sticky is locked) |
 | File | File ▸ Import… / Save All… / Show Backups Folder |
 | App | Settings…, Check for Updates… (opens the Releases page), Quit Floaty |
@@ -39,7 +39,7 @@ A **sticky** has three rows.
 - **Resize:** Drag the edges.
 - **Multiple displays:** New stickies open near the middle of the display the pointer is on. Stickies move freely between displays and can sit across two. If a sticky ends up off screen, for example when you unplug an external display from a MacBook, it moves onto a remaining display (collapsed stickies stay collapsed).
 - **Always on top:** The pin button keeps a sticky above other apps, or lets it fall behind like a normal window.
-- **Color and title:** Pick a color from the palette button; each color has a swatch, and the current one is checked. Click the title of the sticky in front to rename it, or use **Rename** in the palette menu. If the title is empty, the first line of the note is used (without bullets or checkboxes).
+- **Color and title:** Pick a color from the palette button; each color has a swatch, and the current one is checked. Click the title of the sticky in front or press **F2** to rename it, or use **Rename** in the palette menu. Press Return or Esc when you're done. You can change F2 in Settings → Shortcuts; on a MacBook, press it with fn. If the title is empty, the first line of the note is used (without bullets or checkboxes).
 - **Duplicate:** **Duplicate** (⌘D) in the palette menu copies formatting and images too.
 - **Bottom row display:** Double-click the modified time or character count to switch between them. Hover for details.
 
@@ -67,12 +67,12 @@ Select text, then use the format row buttons or shortcuts. If nothing is selecte
 
 | Action | Result | How |
 |---|---|---|
-| Collapse | Only the title row remains | Collapse button, double-click the title |
+| Collapse | Shrinks to a small size showing the start of the title | Collapse button, double-click the title, Esc |
 | Hide | The sticky disappears from the screen | **Hide** in the palette menu |
 | Hide all | Every sticky disappears or comes back | **Show/Hide All** in the menu bar, ⌃⌘H |
 | Collapse all | Collapses all if any is expanded; expands all if all are collapsed | **Collapse/Expand All** in the menu bar, ⌃⌘M |
 
-Reopen a hidden sticky from the **Stickies** list in the menu bar. While everything is hidden, the note in the menu bar icon is drawn with a dashed outline.
+A collapsed sticky keeps only the start of its title and the expand button, plus alarm or lock marks if it has them. Expanding it restores its full size. Reopen a hidden sticky from the **Stickies** list in the menu bar. While everything is hidden, the note in the menu bar icon is drawn with a dashed outline.
 
 Position, size, collapsed and hidden state survive quitting the app and restarting the Mac.
 
@@ -112,7 +112,7 @@ Open it with **Manage Stickies…** in the menu bar, or press ⌘F in a sticky. 
 
 ### Trash
 
-Deleted stickies go to the Trash. A new installation deletes without asking and shows Undo instead (turn on **Confirm before deleting** in Settings → General if you prefer). Empty stickies are deleted without asking. When you delete one with content, an **Undo** notice appears where it was for six seconds; click it to bring the sticky back in the same place. In the **Trash** view you can read notes, **Restore** them (or double-click), or **Delete Permanently**. **Empty Trash** is below the list. Notes in the Trash can't be edited; restore them first. Notes are deleted automatically 30 days after they go to the Trash (you can turn this off in Settings → General). Permanent deletion can't be undone.
+Deleted stickies go to the Trash. A new installation deletes without asking and shows Undo instead (turn on **Confirm before deleting** in Settings → General if you prefer). Pressing **⌘⌫** in a sticky always asks once before moving it to the Trash, whatever this setting is. Empty stickies are deleted without asking. When you delete one with content, an **Undo** notice appears where it was for six seconds; click it to bring the sticky back in the same place. In the **Trash** view (open it directly with **Manage Trash…** in the menu bar) you can read notes, **Restore** them (or double-click), or **Delete Permanently**. **Empty Trash** is below the list. Notes in the Trash can't be edited; restore them first. Notes are deleted automatically 30 days after they go to the Trash (you can turn this off in Settings → General). Permanent deletion can't be undone.
 
 Select several notes with ⌘ or ⇧ to show, hide, move to Trash, or change the color of all of them at once. In the Trash, you can restore or permanently delete several at once.
 
@@ -159,7 +159,8 @@ The **current sticky** is the one you last clicked or typed in. Right after the 
 | Underline | ⌘U | Center | ⌘\| |
 | Strikethrough | ⌘⇧X | Align Right | ⌘} |
 | Clear Formatting | ⌘\\ | Fonts window | ⌘T |
-| Next / Previous Sticky | ⌘\` / ⌘⇧\` | | |
+| Next / Previous Sticky | ⌘\` / ⌘⇧\` | Rename | F2 |
+| Collapse | Esc | Move to Trash | ⌘⌫ (asks first) |
 | Checklist | ⌘⇧L | Find in Sticky | ⌘⇧F (next ⌘G) |
 | Paste Without Formatting | ⌥⇧⌘V | Manage Stickies (search) | ⌘F |
 | Duplicate | ⌘D | Save to File | ⌘S |
@@ -177,7 +178,7 @@ Open with menu bar icon → **Settings…**.
 | Date | Date, year, weekday, and time formats. Changing the language also switches language-specific formats, such as "Fri" and "3:05 PM" |
 | Colors | Title row and background colors for the 10 colors, set separately for light and dark |
 | Sounds | Sound effects (off by default; alarm sounds always play), send alarms to Notification Center (on by default) and a sound for each action: a system sound, none, or your own sound file |
-| Shortcuts | Global shortcuts |
+| Shortcuts | Global shortcuts, and the in-sticky Rename key (F2 by default) |
 
 ## FAQ
 

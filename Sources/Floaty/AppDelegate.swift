@@ -303,6 +303,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         // 자주 쓰는 것부터: 만들고 찾기, 모든 스티커에 하는 동작, 파일, 앱. 하위 메뉴는 한 단계까지만 둔다.
         addHotKeyItem(.newNote, #selector(newNote))
         menu.addItem(withTitle: L("스티커 관리…"), action: #selector(showManager), keyEquivalent: "l").target = self
+        menu.addItem(withTitle: L("휴지통 관리…"), action: #selector(showTrash), keyEquivalent: "").target = self
         // 숨긴 스티커를 포함한 전체 목록. 열 때마다 다시 만든다.
         let notesMenu = NSMenu()
         notesMenu.delegate = self
@@ -400,6 +401,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         managerWindow.show()
     }
 
+    /// 관리 창을 휴지통 보기로 연다.
+    @objc private func showTrash() {
+        managerWindow.model.filter = .trash
+        managerWindow.show()
+    }
+
     /// ⌘F는 관리 창을 열고 검색칸에 바로 입력하게 한다.
     @objc private func showSearch() {
         managerWindow.show(focusSearch: true)
@@ -492,7 +499,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
             onChange: { [weak self] in self?.store.upsert($0) },
             onBodyChange: { [weak self] in self?.store.saveBody($0, id: note.id) },
             bodySize: { [weak self] in self?.store.bodySize(id: note.id) },
-            onDelete: { [weak self] id in self?.moveToTrash(id) },
+            onDelete: { [weak self] id, confirm in self?.moveToTrash(id, alwaysConfirm: confirm) },
             onDuplicate: { [weak self] id in self?.duplicate(id) }
         )
         controllers[note.id] = controller
@@ -602,11 +609,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
     }
 
     /// 빈 스티커는 묻지 않고 지운다. 내용이 있으면 확인한 뒤 지우고, 잠깐 "되돌리기"를 띄운다.
-    private func moveToTrash(_ id: UUID) {
+    /// `alwaysConfirm`(⌘⌫)이면 삭제 확인 설정을 껐어도 묻는다. 빈 스티커는 묻지 않는다.
+    private func moveToTrash(_ id: UUID, alwaysConfirm: Bool = false) {
         guard let controller = controllers[id] else { return }
         let isEmpty = controller.note.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && controller.textView.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        guard isEmpty || confirmMoveToTrash() else { return }
+        guard isEmpty || confirmMoveToTrash(always: alwaysConfirm) else { return }
         controllers.removeValue(forKey: id)
         let frame = controller.panel.frame
         let wasVisible = controller.panel.isVisible
@@ -625,15 +633,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
     }
 
     /// 설정에서 삭제 확인을 껐으면("다시 묻지 않기" 포함) 묻지 않고 통과한다.
-    private func confirmMoveToTrash() -> Bool {
-        if !settings.confirmTrash { return true }
+    private func confirmMoveToTrash(always: Bool = false) -> Bool {
+        if !settings.confirmTrash && !always { return true }
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = L("스티커를 휴지통으로 옮길까요?")
-        alert.informativeText = L("메뉴바의 휴지통에서 되살릴 수 있습니다.")
+        alert.informativeText = L("메뉴바의 휴지통 관리에서 되살릴 수 있습니다.")
         alert.addButton(withTitle: L("휴지통으로 이동"))
         alert.addButton(withTitle: L("취소"))
-        alert.showsSuppressionButton = true
+        // 늘 묻는 경우에는 "다시 묻지 않기"가 이 키에는 듣지 않으므로 보이지 않는다.
+        alert.showsSuppressionButton = !always
         alert.suppressionButton?.title = L("다시 묻지 않기")
         let confirmed = alert.runModal() == .alertFirstButtonReturn
         if confirmed, alert.suppressionButton?.state == .on {

@@ -43,7 +43,66 @@ final class StickyPanel: NSPanel {
         return sizeAtMouseDown
     }
 
+    /// Esc. 원래는 창 닫기(= 삭제)로 이어지던 것을 최소화로 바꾼다.
+    var onEscape: (() -> Void)?
+    /// ⌘⌫. 묻고 나서 휴지통으로 옮긴다.
+    var onTrashKey: (() -> Void)?
+    /// 제목 변경 단축키(기본 F2)와 그 동작.
+    var renameKey: (() -> KeyCombo?)?
+    var onRename: (() -> Void)?
+
+    /// 제목이나 찾기 막대의 입력란에서 쓰는 키는 그쪽에 맡긴다.
+    private var isEditingField: Bool {
+        (firstResponder as? NSTextView)?.isFieldEditor == true
+    }
+
+    /// 스티커 단축키면 처리하고 true를 돌려준다.
+    private func handleKey(_ event: NSEvent) -> Bool {
+        guard !isEditingField else { return false }
+        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        if let combo = renameKey?(), combo.matches(event) {
+            onRename?()
+            return true
+        }
+        if event.keyCode == 51, flags == .command { // ⌘⌫
+            onTrashKey?()
+            return true
+        }
+        if event.keyCode == 53, flags.isEmpty { // Esc
+            // 한글 등을 조합하는 중이면 입력기가 Esc를 쓴다.
+            if let text = firstResponder as? NSTextView, text.hasMarkedText() { return false }
+            onEscape?()
+            return true
+        }
+        return false
+    }
+
+    /// 입력란에서 Esc를 누르면 입력만 끝낸다.
+    var onEndFieldEditing: (() -> Void)?
+
+    /// 입력란에서 누른 Esc를 처리하는 동안. SwiftUI가 초점을 먼저 놓아 버려도 입력란에서 온 것임을 안다.
+    private var isEscapingField = false
+
+    override func cancelOperation(_ sender: Any?) {
+        if isEscapingField || isEditingField {
+            onEndFieldEditing?()
+        } else if let text = firstResponder as? NSTextView, text.hasMarkedText() {
+            return
+        } else {
+            onEscape?()
+        }
+    }
+
     override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, handleKey(event) { return }
+        if event.type == .keyDown, event.keyCode == 53, isEditingField {
+            isEscapingField = true
+            defer { isEscapingField = false }
+            super.sendEvent(event)
+            // SwiftUI 입력란이 Esc를 먹고 위로 넘기지 않아도 입력은 끝낸다.
+            if isEditingField { onEndFieldEditing?() }
+            return
+        }
         if event.type == .leftMouseDown {
             wasKeyBeforeMouseDown = isKeyWindow
             sizeAtMouseDown = frame.size

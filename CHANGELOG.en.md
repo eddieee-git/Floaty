@@ -2,6 +2,14 @@
 
 [한국어](CHANGELOG.md)
 
+## Next version (not released yet)
+
+- **Rename shortcut:** Press F2 in a sticky to rename it. Change or turn it off in Settings → Shortcuts.
+- **Esc collapses:** Esc used to delete the sticky. It now collapses it.
+- **Smaller collapse:** A collapsed sticky also shrinks in width, keeping only the start of the title and the expand button. Expanding restores its full size.
+- **Delete with ⌘⌫:** Press ⌘⌫ in a sticky to move it to the Trash after one confirmation (empty stickies aren't asked about).
+- **Manage Trash menu:** Opens the Trash directly, right below Manage Stickies in the menu bar.
+
 ## 0.2.0
 
 ### New

@@ -36,6 +36,16 @@ struct KeyCombo: Codable, Equatable {
         ]
     }()
 
+    /// 스티커 안 제목 변경의 기본 키.
+    static let renameDefault = KeyCombo(keyCode: UInt32(kVK_F2), modifiers: 0, key: "F2")
+
+    /// 키 입력이 이 조합과 같은지. ⇪·fn·숫자 패드 표시는 보지 않는다.
+    func matches(_ event: NSEvent) -> Bool {
+        guard event.keyCode == UInt16(keyCode) else { return false }
+        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        return flags == menuModifiers
+    }
+
     /// 따로 있던 모두 최소화·모두 펼치기 단축키를 합친 토글로 옮긴다. 둘 다 있었으면 최소화 쪽을 남긴다.
     static func migrated(_ combos: [String: KeyCombo]) -> [String: KeyCombo] {
         var combos = combos

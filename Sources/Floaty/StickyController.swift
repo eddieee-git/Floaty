@@ -6,6 +6,9 @@ import SwiftUI
 final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTextViewDelegate {
     /// 제목 표시줄 높이. 최소화하면 창이 이 높이만 남는다.
     static let headerHeight: CGFloat = 28
+    /// 최소화한 스티커의 폭. 제목 앞부분과 펼치기 버튼만 남는다. 알람·잠금 표시가 있으면 하나에 `chipIconWidth`씩 넓힌다.
+    static let collapsedWidth: CGFloat = 160
+    static let chipIconWidth: CGFloat = 26
     /// 알람 메뉴의 "N분 후" 항목(분).
     static let alarmDelays = [5, 10, 15, 30, 60]
     /// 울리는 알람의 "다시 알림" 간격(분).
@@ -27,7 +30,10 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
                 onBodyChange(textView.attributedString())
             }
             applyWindowState()
-            if note.isCollapsed != oldValue.isCollapsed { applyCollapse() }
+            if note.isCollapsed != oldValue.isCollapsed
+                || (note.isCollapsed && (note.isLocked != oldValue.isLocked || (note.alarmDate == nil) != (oldValue.alarmDate == nil))) {
+                applyCollapse()
+            }
         }
     }
 
@@ -53,7 +59,7 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
     private let onChange: (Note) -> Void
     private let onBodyChange: (NSAttributedString) -> Void
     private let bodySize: () -> Int?
-    private let onDelete: (UUID) -> Void
+    private let onDelete: (UUID, Bool) -> Void
     private let onDuplicate: (UUID) -> Void
     private var pendingBodySave: DispatchWorkItem?
     private var isAuthenticating = false
@@ -65,7 +71,7 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         onChange: @escaping (Note) -> Void,
         onBodyChange: @escaping (NSAttributedString) -> Void,
         bodySize: @escaping () -> Int? = { nil },
-        onDelete: @escaping (UUID) -> Void,
+        onDelete: @escaping (UUID, Bool) -> Void,
         onDuplicate: @escaping (UUID) -> Void
     ) {
         self.note = note
@@ -84,6 +90,11 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         panel.onClick = { [weak self] in
             if self?.isAlarmRinging == true { self?.dismissAlarm() }
         }
+        panel.onEscape = { [weak self] in self?.collapse() }
+        panel.onEndFieldEditing = { [weak self] in self?.endFieldEditing() }
+        panel.onTrashKey = { [weak self] in self?.delete(confirm: true) }
+        panel.renameKey = { [weak settings] in settings?.renameTitleKey }
+        panel.onRename = { [weak self] in self?.titleEditRequest += 1 }
         // 본문 파일이 없으면 이전 버전의 일반 텍스트를 옮겨 온다.
         let initialBody = body ?? NSAttributedString(string: note.text, attributes: FormattingTextView.defaultAttributes)
         textView.textStorage?.setAttributedString(initialBody)
@@ -151,14 +162,24 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         panel.orderOut(nil)
     }
 
+    /// Esc. 이미 최소화했으면 그대로 둔다.
+    func collapse() {
+        guard !note.isCollapsed else { return }
+        toggleCollapsed()
+    }
+
+    /// 제목 변경 단축키를 누를 때마다 늘린다. 화면 쪽이 보고 제목 입력란을 연다.
+    @Published var titleEditRequest = 0
+
     func toggleCollapsed() {
         (note.isCollapsed ? SoundEffect.expand : .collapse).play()
         note.isCollapsed.toggle()
     }
 
     /// 삭제 요청만 전달한다. 확인과 휴지통 이동은 AppDelegate가 맡는다.
-    func delete() {
-        onDelete(note.id)
+    /// `confirm`이면 설정과 상관없이 묻는다(⌘⌫). 빈 스티커는 그래도 묻지 않는다.
+    func delete(confirm: Bool = false) {
+        onDelete(note.id, confirm)
     }
 
     /// 스티커 메뉴와 ⌘D. 복제는 AppDelegate가 맡는다.
@@ -417,14 +438,20 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         return dx * dx + dy * dy
     }
 
-    /// 윗변을 고정한 채 제목 표시줄 높이로 접거나 저장된 크기로 펼친다.
+    /// 최소화한 폭. 펼친 폭보다 넓어지지는 않는다.
+    var chipWidth: CGFloat {
+        let icons = (note.alarmDate != nil ? 1 : 0) + (note.isLocked ? 1 : 0)
+        return min(Self.collapsedWidth + CGFloat(icons) * Self.chipIconWidth, max(note.frame.width, Self.collapsedWidth))
+    }
+
+    /// 왼쪽 위 모서리를 고정한 채 제목 앞부분만 남는 작은 크기로 접거나 저장된 크기로 펼친다.
     private func applyCollapse() {
         let expanded = note.frame
         if note.isCollapsed {
             panel.styleMask.remove(.resizable)
-            panel.minSize = NSSize(width: StickyPanel.minimumSize.width, height: Self.headerHeight)
+            panel.minSize = NSSize(width: Self.collapsedWidth, height: Self.headerHeight)
             panel.setFrame(NSRect(x: expanded.minX, y: expanded.maxY - Self.headerHeight,
-                                  width: expanded.width, height: Self.headerHeight), display: true)
+                                  width: chipWidth, height: Self.headerHeight), display: true)
         } else {
             panel.styleMask.insert(.resizable)
             panel.minSize = StickyPanel.minimumSize
@@ -443,6 +470,15 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
     }
 
     // MARK: NSTextViewDelegate
+
+    /// 제목 입력을 끝낸 뒤 본문으로 돌아간다. 가려졌거나 접혔으면 초점만 뺀다.
+    func endFieldEditing() {
+        if !isContentHidden && !note.isCollapsed {
+            panel.makeFirstResponder(textView)
+        } else {
+            panel.makeFirstResponder(nil)
+        }
+    }
 
     /// 서식 도구 모음의 동작을 이 스티커의 편집기에 보낸다.
     func applyFormat(_ action: (FormattingTextView) -> Void) {
@@ -809,6 +845,7 @@ struct StickyView: View {
     var body: some View {
         // 언어를 바꾸면 도구 모음과 설명 풍선까지 모두 새 문구로 다시 그린다.
         content.id(settings.language)
+            .onChange(of: controller.titleEditRequest) { _ in startEditingTitle() }
     }
 
     private var content: some View {
@@ -823,43 +860,48 @@ struct StickyView: View {
                     if controller.note.isLocked { lockMenu }
                 }
 
-                headerButton(controller.note.isPinned ? "pin.fill" : "pin",
-                             help: controller.note.isPinned ? L("항상 위 해제") : L("항상 위")) {
-                    controller.note.isPinned.toggle()
-                }
-
-                Menu {
-                    Button(L("제목 변경")) { startEditingTitle() }
-                    Divider()
-                    PaletteMenuItems(selected: controller.note.colorIndex) { controller.note.colorIndex = $0 }
-                    Divider()
-                    Menu(L("알람")) { alarmItems }
-                    Button(L("복제")) { controller.duplicateNote(nil) }
-                        .disabled(controller.isContentHidden)
-                    Button(L("파일로 저장…")) { controller.saveToFile(nil) }
-                        .disabled(controller.isContentHidden)
-                    Button(L("인쇄…")) { controller.printNote(nil) }
-                        .disabled(controller.isContentHidden)
-                    Divider()
-                    if controller.note.isLocked {
-                        Button(L("잠금 없애기")) { controller.removeLock() }
+                // 최소화하면 작은 폭에 제목 앞부분과 펼치기 버튼만 남긴다.
+                if !controller.note.isCollapsed {
+                    headerButton(controller.note.isPinned ? "pin.fill" : "pin",
+                                 help: controller.note.isPinned ? L("항상 위 해제") : L("항상 위")) {
+                        controller.note.isPinned.toggle()
                     }
-                    Button(L("숨기기")) { controller.hide() }
-                    Button(L("삭제"), role: .destructive) { controller.delete() }
-                } label: {
-                    Image(systemName: "paintpalette")
+
+                    Menu {
+                        Button(L("제목 변경")) { startEditingTitle() }
+                        Divider()
+                        PaletteMenuItems(selected: controller.note.colorIndex) { controller.note.colorIndex = $0 }
+                        Divider()
+                        Menu(L("알람")) { alarmItems }
+                        Button(L("복제")) { controller.duplicateNote(nil) }
+                            .disabled(controller.isContentHidden)
+                        Button(L("파일로 저장…")) { controller.saveToFile(nil) }
+                            .disabled(controller.isContentHidden)
+                        Button(L("인쇄…")) { controller.printNote(nil) }
+                            .disabled(controller.isContentHidden)
+                        Divider()
+                        if controller.note.isLocked {
+                            Button(L("잠금 없애기")) { controller.removeLock() }
+                        }
+                        Button(L("숨기기")) { controller.hide() }
+                        Button(L("삭제"), role: .destructive) { controller.delete() }
+                    } label: {
+                        Image(systemName: "paintpalette")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .labeledHelp(L("색과 메뉴"))
                 }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .labeledHelp(L("색과 메뉴"))
 
                 headerButton(controller.note.isCollapsed ? "chevron.down" : "chevron.up",
                              help: controller.note.isCollapsed ? L("펼치기") : L("최소화")) {
                     toggleCollapse()
                 }
 
-                headerButton("trash", help: L("휴지통으로 이동")) { controller.delete() }
+                if !controller.note.isCollapsed {
+                    headerButton("trash", help: L("휴지통으로 이동")) { controller.delete() }
+                }
             }
             .padding(.horizontal, 10)
             .frame(height: StickyController.headerHeight)

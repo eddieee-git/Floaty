@@ -17,7 +17,7 @@ final class SettingsWindowController {
     func show() {
         if window == nil {
             let w = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 520, height: 520),
+                contentRect: NSRect(x: 0, y: 0, width: 520, height: 560),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
@@ -112,9 +112,7 @@ struct SettingsView: View {
 
     private var shortcuts: some View {
         Form {
-            Section {
-                HotKeyEditor(settings: settings)
-            }
+            HotKeyEditor(settings: settings)
         }
         .formStyle(.grouped)
     }
@@ -270,55 +268,100 @@ private struct SoundEditor: View {
     }
 }
 
-/// 전역 단축키를 입력받는다. 버튼을 누른 다음 원하는 조합을 누르면 저장한다.
+/// 단축키를 고치는 칸. 전역 단축키와 스티커 안에서만 쓰는 제목 변경 키가 있다.
+private enum ShortcutSlot: Hashable {
+    case global(HotKeyAction)
+    case rename
+
+    var title: String {
+        switch self {
+        case .global(let action): return action.title
+        case .rename: return L("제목 변경")
+        }
+    }
+}
+
+/// 단축키를 입력받는다. 버튼을 누른 다음 원하는 조합을 누르면 저장한다.
 private struct HotKeyEditor: View {
     @ObservedObject var settings: AppSettings
-    @State private var recording: HotKeyAction?
+    @State private var recording: ShortcutSlot?
     @State private var monitor: Any?
     @State private var message: String?
 
     var body: some View {
-        ForEach(HotKeyAction.allCases, id: \.self) { action in
-            LabeledContent(action.title) {
-                HStack(spacing: 8) {
-                    if settings.failedHotKeys.contains(action) {
-                        Text(L("등록하지 못함")).font(.caption).foregroundStyle(.red)
-                    }
-                    Button(recording == action ? L("키를 누르세요") : settings.hotKeys[action.rawValue]?.displayText ?? L("없음")) {
-                        recording == action ? stop() : start(action)
-                    }
-                    .frame(minWidth: 110)
-                    Button {
-                        settings.hotKeys[action.rawValue] = nil
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(settings.hotKeys[action.rawValue] == nil)
-                    .help(L("단축키 지우기"))
-                }
+        Section(L("전역 단축키")) {
+            ForEach(HotKeyAction.allCases, id: \.self) { action in
+                row(.global(action), failed: settings.failedHotKeys.contains(action))
             }
         }
-        HStack {
-            Text(message ?? L("Esc를 누르면 입력을 취소합니다."))
+        Section {
+            row(.rename, failed: false)
+        } header: {
+            Text(L("스티커 안 단축키"))
+        } footer: {
+            Text(L("앞에 있는 스티커에서만 동작합니다. 맥북에서 F2를 쓰려면 fn 키와 함께 누르세요."))
                 .font(.caption)
-                .foregroundStyle(message == nil ? Color.secondary : Color.red)
-            Spacer()
-            Button(L("기본값으로")) {
-                stop()
-                settings.hotKeys = KeyCombo.defaults
+                .foregroundStyle(.secondary)
+        }
+        Section {
+            HStack {
+                Text(message ?? L("Esc를 누르면 입력을 취소합니다."))
+                    .font(.caption)
+                    .foregroundStyle(message == nil ? Color.secondary : Color.red)
+                Spacer()
+                Button(L("기본값으로")) {
+                    stop()
+                    settings.hotKeys = KeyCombo.defaults
+                    settings.renameTitleKey = KeyCombo.renameDefault
+                }
             }
         }
         .onDisappear(perform: stop)
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
     }
 
-    private func start(_ action: HotKeyAction) {
+    private func row(_ slot: ShortcutSlot, failed: Bool) -> some View {
+        LabeledContent(slot.title) {
+            HStack(spacing: 8) {
+                if failed {
+                    Text(L("등록하지 못함")).font(.caption).foregroundStyle(.red)
+                }
+                Button(recording == slot ? L("키를 누르세요") : combo(for: slot)?.displayText ?? L("없음")) {
+                    recording == slot ? stop() : start(slot)
+                }
+                .frame(minWidth: 110)
+                Button {
+                    setCombo(nil, for: slot)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .disabled(combo(for: slot) == nil)
+                .help(L("단축키 지우기"))
+            }
+        }
+    }
+
+    private func combo(for slot: ShortcutSlot) -> KeyCombo? {
+        switch slot {
+        case .global(let action): return settings.hotKeys[action.rawValue]
+        case .rename: return settings.renameTitleKey
+        }
+    }
+
+    private func setCombo(_ combo: KeyCombo?, for slot: ShortcutSlot) {
+        switch slot {
+        case .global(let action): settings.hotKeys[action.rawValue] = combo
+        case .rename: settings.renameTitleKey = combo
+        }
+    }
+
+    private func start(_ slot: ShortcutSlot) {
         stop()
-        recording = action
+        recording = slot
         settings.isRecordingHotKey = true
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            handle(event, for: action)
+            handle(event, for: slot)
             return nil
         }
     }
@@ -331,7 +374,7 @@ private struct HotKeyEditor: View {
         if settings.isRecordingHotKey { settings.isRecordingHotKey = false }
     }
 
-    private func handle(_ event: NSEvent, for action: HotKeyAction) {
+    private func handle(_ event: NSEvent, for slot: ShortcutSlot) {
         if event.keyCode == 53 { // Esc
             stop()
             return
@@ -340,11 +383,13 @@ private struct HotKeyEditor: View {
             message = L("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.")
             return
         }
-        if let other = HotKeyAction.allCases.first(where: { $0 != action && settings.hotKeys[$0.rawValue] == combo }) {
+        // 전역 단축키가 먼저 가로채므로 스티커 안 단축키와도 겹치면 안 된다.
+        let others: [ShortcutSlot] = HotKeyAction.allCases.map { .global($0) } + [.rename]
+        if let other = others.first(where: { $0 != slot && self.combo(for: $0) == combo }) {
             message = L("%@에서 쓰는 단축키입니다.", other.title)
             return
         }
-        settings.hotKeys[action.rawValue] = combo
+        setCombo(combo, for: slot)
         stop()
     }
 }

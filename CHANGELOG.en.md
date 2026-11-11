@@ -2,7 +2,7 @@
 
 [한국어](CHANGELOG.md)
 
-## Next version (not released yet)
+## 0.2.1
 
 - **Rename shortcut:** Press F2 in a sticky to rename it. Change or turn it off in Settings → Shortcuts.
 - **Esc collapses:** Esc used to delete the sticky. It now collapses it.

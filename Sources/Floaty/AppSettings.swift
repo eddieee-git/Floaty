@@ -61,6 +61,7 @@ final class AppSettings: ObservableObject {
         // 삭제 확인 대화상자의 "다시 묻지 않기"가 이 키에 저장된다.
         static let skipTrashConfirmation = "skipTrashConfirmation"
         static let autoEmptyTrash = "autoEmptyTrash"
+        static let checkForUpdates = "checkForUpdates"
     }
 
     private let defaults = UserDefaults.standard
@@ -154,6 +155,8 @@ final class AppSettings: ObservableObject {
     @Published var confirmTrash: Bool { didSet { defaults.set(!confirmTrash, forKey: Keys.skipTrashConfirmation) } }
     /// 휴지통에서 `NoteStore.trashRetentionDays`일이 지난 스티커를 저절로 지운다. 기본은 켬.
     @Published var autoEmptyTrash: Bool { didSet { defaults.set(autoEmptyTrash, forKey: Keys.autoEmptyTrash) } }
+    /// 하루에 한 번 GitHub에서 새 버전이 있는지 확인한다. 기본은 켬. 꺼도 메뉴에서 직접 확인할 수 있다.
+    @Published var checkForUpdates: Bool { didSet { defaults.set(checkForUpdates, forKey: Keys.checkForUpdates) } }
 
     /// 이 Mac에서 Floaty를 쓴 적이 있다(스티커 목록 파일이 있다).
     private static var hasExistingNotes: Bool {
@@ -203,6 +206,7 @@ final class AppSettings: ObservableObject {
         }
         confirmTrash = !defaults.bool(forKey: Keys.skipTrashConfirmation)
         autoEmptyTrash = defaults.object(forKey: Keys.autoEmptyTrash) as? Bool ?? true
+        checkForUpdates = defaults.object(forKey: Keys.checkForUpdates) as? Bool ?? true
         SoundEffect.isEnabled = soundEffects
         SoundEffect.choices = sounds
         applyNewNoteFont()

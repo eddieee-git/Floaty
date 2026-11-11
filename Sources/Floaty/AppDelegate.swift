@@ -51,6 +51,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         alarmTimer = timer
     }
     private var purgeTimer: Timer?
+    private let updater = Updater()
+    private var updateItem: NSMenuItem?
     private var autoEmptySubscription: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -118,12 +120,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         let purgeTimer = Timer(timeInterval: 3600, repeats: true) { [weak self] _ in
             self?.purgeTrashIfNeeded()
             self?.store.backupIfNeeded()
+            self?.checkForUpdatesIfDue()
         }
         RunLoop.main.add(purgeTimer, forMode: .common)
         self.purgeTimer = purgeTimer
         autoEmptySubscription = settings.$autoEmptyTrash.dropFirst().sink { [weak self] isOn in
             if isOn { DispatchQueue.main.async { self?.purgeTrashIfNeeded() } }
         }
+        updater.onChange = { [weak self] in self?.updateUpdateItem() }
+        // 켜자마자 네트워크를 쓰지 않도록 조금 뒤에 확인한다.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in self?.checkForUpdatesIfDue() }
         if store.isFirstRun {
             showWelcome()
         } else {
@@ -179,8 +185,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         if !next.isContentHidden && !next.note.isCollapsed { next.panel.makeFirstResponder(next.textView) }
     }
 
-    @objc private func openReleases() {
-        NSWorkspace.shared.open(URL(string: "https://github.com/eddieee-git/mac-app-floaty/releases")!)
+    @objc private func checkForUpdates() {
+        updater.check(userInitiated: true)
+    }
+
+    private func checkForUpdatesIfDue() {
+        updater.checkIfDue(enabled: settings.checkForUpdates)
+    }
+
+    /// 새 버전을 찾았으면 메뉴 문구를 바로 설치로 바꾼다.
+    private func updateUpdateItem() {
+        if let version = updater.available?.version {
+            updateItem?.title = L("새 버전 %@ 설치…", version)
+        } else {
+            updateItem?.title = L("새 버전 확인… (지금 %@)", Updater.currentVersion)
+        }
     }
 
     @objc private func showBackups() {
@@ -325,9 +344,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         menu.addItem(withTitle: L("파일"), action: nil, keyEquivalent: "").submenu = fileMenu
         menu.addItem(.separator())
         menu.addItem(withTitle: L("설정…"), action: #selector(showSettings), keyEquivalent: ",").target = self
-        // 인터넷으로 확인하지 않고, 누르면 Releases 페이지를 연다.
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
-        menu.addItem(withTitle: L("새 버전 확인… (지금 %@)", version), action: #selector(openReleases), keyEquivalent: "").target = self
+        updateItem = menu.addItem(withTitle: "", action: #selector(checkForUpdates), keyEquivalent: "")
+        updateItem?.target = self
+        updateUpdateItem()
         menu.addItem(.separator())
         menu.addItem(withTitle: L("Floaty 종료"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.delegate = self

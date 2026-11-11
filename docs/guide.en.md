@@ -24,7 +24,7 @@ Click the **menu bar icon** to open this menu. Hold ⌥ while clicking to create
 | Create and find | New Sticky, Manage Stickies…, Manage Trash…, Stickies ▸ (every sticky; visible ones are checked) |
 | All stickies | Show/Hide All, Collapse/Expand All, Lock All Again (only when a sticky is locked) |
 | File | File ▸ Import… / Save All… / Show Backups Folder |
-| App | Settings…, Check for Updates… (opens the Releases page), Quit Floaty |
+| App | Settings…, Check for Updates… (installs a new version right away), Quit Floaty |
 
 A **sticky** has three rows.
 
@@ -173,7 +173,7 @@ Open with menu bar icon → **Settings…**.
 
 | Tab | Contents |
 |---|---|
-| General | Language (Korean or English, applies immediately), theme, open at login, confirm before deleting, empty Trash after 30 days (on by default) |
+| General | Language (Korean or English, applies immediately), theme, open at login, confirm before deleting, empty Trash after 30 days (on by default), automatically check for updates (on by default) |
 | Stickies | Default size, font, text size, always on top, and color (random or fixed) for new stickies. Opacity and bottom-row display for all stickies |
 | Date | Date, year, weekday, and time formats. Changing the language also switches language-specific formats, such as "Fri" and "3:05 PM" |
 | Colors | Title row and background colors for the 10 colors, set separately for light and dark |

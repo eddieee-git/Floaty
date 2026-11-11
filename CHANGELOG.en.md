@@ -9,6 +9,7 @@
 - **Smaller collapse:** A collapsed sticky also shrinks in width, keeping only the start of the title and the expand button. Expanding restores its full size.
 - **Delete with ⌘⌫:** Press ⌘⌫ in a sticky to move it to the Trash after one confirmation (empty stickies aren't asked about).
 - **Manage Trash menu:** Opens the Trash directly, right below Manage Stickies in the menu bar.
+- **In-app updates:** Floaty checks for a new version once a day; click Update to download it, replace the app, and restart. The download is installed only after its signature is verified. Turn off automatic checks in Settings → General. Install 0.2.1 itself by hand; later versions arrive automatically.
 
 ## 0.2.0
 

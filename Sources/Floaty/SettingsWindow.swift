@@ -190,6 +190,7 @@ struct SettingsView: View {
                     .disabled(!settings.canLaunchAtLogin)
                 Toggle(L("삭제하기 전에 확인"), isOn: $settings.confirmTrash)
                 Toggle(L("휴지통에서 %d일 지난 스티커 자동으로 지우기", NoteStore.trashRetentionDays), isOn: $settings.autoEmptyTrash)
+                Toggle(L("새 버전이 있는지 자동으로 확인"), isOn: $settings.checkForUpdates)
             }
         }
         .formStyle(.grouped)

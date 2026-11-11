@@ -17,7 +17,7 @@ codesign --force --sign - --options runtime "$app"
 
 # 내려받은 쪽에서 응용 프로그램 폴더로 끌어다 놓을 수 있게 바로가기를 함께 넣는다.
 staging=build/dmg
-rm -rf "$staging" build/Floaty.dmg
+rm -rf "$staging" build/Floaty.dmg build/Floaty.dmg.sig
 mkdir -p "$staging"
 cp -R "$app" "$staging/"
 ln -s /Applications "$staging/Applications"
@@ -26,3 +26,9 @@ rm -rf "$staging"
 
 echo "$app"
 echo build/Floaty.dmg
+
+# 앱 안 업데이트가 확인하는 서명. 릴리스에 Floaty.dmg와 함께 Floaty.dmg.sig를 올린다.
+# 서명 키가 없는 Mac(직접 빌드하는 사람)에서는 건너뛴다.
+if [[ -f "${FLOATY_UPDATE_KEY:-$HOME/.config/floaty/update-signing.key}" ]]; then
+    swift scripts/sign-update.swift sign build/Floaty.dmg
+fi

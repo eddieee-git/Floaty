@@ -44,6 +44,7 @@ osascript -e 'quit app "Floaty"'; rm -rf /Applications/Floaty.app && ditto build
    `sed -E -i '' 's/private\(set\) //g; s/(^|[^a-zA-Z])private (var|let|func|static|lazy|final|enum|struct|class)/\1\2/g' src/*.swift`
 3. 시험 코드를 `t/main.swift`에 쓰고 `swiftc -O -o test src/*.swift t/main.swift`.
 4. 실제 스티커를 건드리지 않도록 `HOME`과 `CFFIXED_USER_HOME`을 임시 폴더로 바꿔 실행한다. 모달 알림은 `.modalPanel` 모드에 넣은 Timer로 `NSApp.stopModal(withCode:)`를 불러 닫는다.
+5. 시험 실행 파일도 메뉴바 아이콘을 띄운다. 기다리다 멈추면 꼭 `kill`해서, 진짜 Floaty 옆에 아이콘이 하나 더 남지 않게 한다.
 
 업데이트 기능은 `FLOATY_UPDATE_FEED` 환경 변수로 로컬 서버(`python3 -m http.server`)의 가짜 릴리스 JSON을 보게 해서 시험한다. 이때 번들 ID를 바꾼 시험용 `.app` 안에서 실행해야 켜져 있는 Floaty와 겹치지 않는다.
 

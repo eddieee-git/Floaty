@@ -18,7 +18,7 @@ No Dock icon appears. If a pinned-note icon shows up in the menu bar at the top 
 
 ## The security warning on first launch
 
-The first time you open Floaty downloaded from the internet, macOS blocks it and shows a warning. The wording depends on the macOS version; it usually says Apple cannot check it for malicious software.
+The first time you open Floaty downloaded from the internet, macOS blocks it and shows a warning. On recent macOS the title is **“Floaty” Not Opened**, saying Apple cannot check it for malicious software. The wording varies a little between macOS versions.
 
 **Why?** By default, macOS blocks apps that aren't signed and notarized through Apple's paid developer program. Floaty is a free project and doesn't have that. The warning doesn't mean a problem was found, but it does mean Apple hasn't checked the app. Only open files from sources you trust. The code is public in this repository, so you can review it and [build it yourself](../README.en.md#build-it-yourself).
 
@@ -29,7 +29,7 @@ The first time you open Floaty downloaded from the internet, macOS blocks it and
 3. Scroll down to **Security** and click **Open Anyway** next to the Floaty message.
 4. In the confirmation, click **Open Anyway** again and approve with your Mac password or Touch ID.
 
-You only need to do this once. You may need to do it again after installing a new version.
+You only need to do this once. Updating from inside the app doesn't bring it back; installing a new dmg by hand may.
 
 ### Option 2: A Terminal command
 

@@ -112,7 +112,7 @@ Open it with **Manage Stickies…** in the menu bar, or press ⌘F in a sticky. 
 
 ### Trash
 
-Deleted stickies go to the Trash. A new installation deletes without asking and shows Undo instead (turn on **Confirm before deleting** in Settings → General if you prefer). Pressing **⌘⌫** in a sticky always asks once before moving it to the Trash, whatever this setting is. Empty stickies are deleted without asking. When you delete one with content, an **Undo** notice appears where it was for six seconds; click it to bring the sticky back in the same place. In the **Trash** view (open it directly with **Manage Trash…** in the menu bar) you can read notes, **Restore** them (or double-click), or **Delete Permanently**. **Empty Trash** is below the list. Notes in the Trash can't be edited; restore them first. Notes are deleted automatically 30 days after they go to the Trash (you can turn this off in Settings → General). Permanent deletion can't be undone.
+Deleted stickies go to the Trash. A new installation deletes without asking and shows Undo instead (turn on **Confirm before deleting** in Settings → General if you prefer). Pressing **⌘⌫** in a sticky, or the global shortcut **⌃⌘⌫**, always asks once before moving it to the Trash, whatever this setting is. Empty stickies are deleted without asking. When you delete one with content, an **Undo** notice appears where it was for six seconds; click it to bring the sticky back in the same place. In the **Trash** view (open it directly with **Manage Trash…** in the menu bar) you can read notes, **Restore** them (or double-click), or **Delete Permanently**. **Empty Trash** is below the list. Notes in the Trash can't be edited; restore them first. Notes are deleted automatically 30 days after they go to the Trash (you can turn this off in Settings → General). Permanent deletion can't be undone.
 
 Select several notes with ⌘ or ⇧ to show, hide, move to Trash, or change the color of all of them at once. In the Trash, you can restore or permanently delete several at once.
 
@@ -146,7 +146,7 @@ These work while you use other apps. In **Settings → Shortcuts**, click an ite
 | Collapse/Expand All | ⌃⌘M |
 | Collapse/Expand Current Sticky | ⌃⌥M |
 | Hide/Show Current Sticky | ⌃⌥H |
-| Delete Current Sticky | ⌃⌘⌫ |
+| Delete Current Sticky | ⌃⌘⌫ (asks first) |
 
 The **current sticky** is the one you last clicked or typed in. Right after the app starts, these do nothing until you click a sticky. Pressing the hide shortcut again brings the hidden sticky back. The delete shortcut only moves visible stickies to the Trash, and pressing it repeatedly won't delete another one until you click a different sticky.
 

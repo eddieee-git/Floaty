@@ -474,9 +474,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
     }
 
     /// 보이지 않는 스티커를 모르고 지우지 않도록 보이는 것만 지운다.
+    /// 다른 앱을 쓰다가도 눌리는 전역 단축키라, ⌘⌫처럼 설정과 상관없이 한 번 묻는다.
     private func trashCurrent() {
         guard let id = currentNoteID, let controller = controllers[id], controller.panel.isVisible else { return }
-        moveToTrash(id)
+        moveToTrash(id, alwaysConfirm: true)
     }
 
     private func toggleCurrentHidden() {
@@ -628,7 +629,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
     }
 
     /// 빈 스티커는 묻지 않고 지운다. 내용이 있으면 확인한 뒤 지우고, 잠깐 "되돌리기"를 띄운다.
-    /// `alwaysConfirm`(⌘⌫)이면 삭제 확인 설정을 껐어도 묻는다. 빈 스티커는 묻지 않는다.
+    /// `alwaysConfirm`(⌘⌫, ⌃⌘⌫)이면 삭제 확인 설정을 껐어도 묻는다. 빈 스티커는 묻지 않는다.
     private func moveToTrash(_ id: UUID, alwaysConfirm: Bool = false) {
         guard let controller = controllers[id] else { return }
         let isEmpty = controller.note.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

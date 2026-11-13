@@ -3,7 +3,7 @@ import CryptoKit
 
 /// GitHub Releases에서 새 버전을 확인하고, 누르면 내려받아 바꿔 끼운 뒤 다시 켠다.
 ///
-/// 받은 dmg는 릴리스에 함께 올린 `Floaty.dmg.sig`(Ed25519 서명)로 확인한다. 서명 키는 개발자만 갖고 있고
+/// 받은 dmg는 릴리스에 함께 올린 `.sig` 파일(Ed25519 서명)로 확인한다. 서명 키는 개발자만 갖고 있고
 /// 앱에는 공개 키만 들어 있어서, GitHub 계정이나 다운로드 경로가 바뀌어도 다른 파일은 설치하지 않는다.
 /// Apple 인증서와는 상관없다. 서명 도구는 `scripts/sign-update.swift`.
 /// 메인 스레드에서만 쓴다. 비동기 작업도 메인 액터에서 이어 간다.
@@ -111,7 +111,9 @@ final class Updater {
             }
         }
         let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-        return Release(version: version, page: page, dmg: assets["Floaty.dmg"], signature: assets["Floaty.dmg.sig"])
+        // 0.2.2부터 dmg 이름에 버전이 들어간다. 그 전 릴리스는 Floaty.dmg다.
+        let name = ["Floaty-\(version).dmg", "Floaty.dmg"].first { assets[$0] != nil && assets[$0 + ".sig"] != nil }
+        return Release(version: version, page: page, dmg: name.flatMap { assets[$0] }, signature: name.flatMap { assets[$0 + ".sig"] })
     }
 
     // MARK: - 묻기

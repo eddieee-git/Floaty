@@ -32,7 +32,7 @@
 
 ## 설치
 
-1. [Releases](https://github.com/eddieee-git/mac-app-floaty/releases)에서 `Floaty.dmg`를 내려받습니다.
+1. [Releases](https://github.com/eddieee-git/mac-app-floaty/releases)에서 `Floaty-버전.dmg`(0.2.1까지는 `Floaty.dmg`)를 내려받습니다.
 2. dmg를 열고 Floaty를 Applications 폴더로 끌어다 놓습니다.
 3. Floaty를 실행합니다.
 
@@ -60,7 +60,7 @@ Xcode 없이 Command Line Tools만 있으면 됩니다.
 scripts/build-app.sh
 ```
 
-`build/Floaty.app`과 `build/Floaty.dmg`가 만들어집니다.
+`build/Floaty.app`과 `build/Floaty-버전.dmg`가 만들어집니다.
 
 ## 알아 두기
 

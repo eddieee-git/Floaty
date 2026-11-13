@@ -9,7 +9,7 @@
 
 ## Installing
 
-1. Download `Floaty.dmg` from [Releases](https://github.com/eddieee-git/mac-app-floaty/releases).
+1. Download `Floaty-<version>.dmg` (`Floaty.dmg` up to 0.2.1) from [Releases](https://github.com/eddieee-git/mac-app-floaty/releases).
 2. Open the dmg and drag Floaty to the Applications folder.
 3. Eject the dmg.
 4. Open Floaty from the Applications folder.
@@ -63,7 +63,7 @@ Turn off automatic checks with **Automatically check for updates** in Settings â
 To update from 0.2.0 or earlier, or by hand:
 
 1. Quit the app with menu bar icon â†’ **Quit Floaty**.
-2. Open the new `Floaty.dmg` and drag it to the Applications folder to replace the old app.
+2. Open the new dmg and drag it to the Applications folder to replace the old app.
 
 Stickies and settings are stored separately from the app, so they stay.
 

@@ -9,7 +9,7 @@
 
 ## 설치하기
 
-1. [Releases](https://github.com/eddieee-git/mac-app-floaty/releases)에서 `Floaty.dmg`를 내려받습니다.
+1. [Releases](https://github.com/eddieee-git/mac-app-floaty/releases)에서 `Floaty-버전.dmg`(0.2.1까지는 `Floaty.dmg`)를 내려받습니다.
 2. dmg를 열고 Floaty를 Applications 폴더로 끌어다 놓습니다.
 3. dmg를 꺼냅니다.
 4. Applications 폴더에서 Floaty를 실행합니다.
@@ -63,7 +63,7 @@ xattr -dr com.apple.quarantine /Applications/Floaty.app
 0.2.0 이전 버전이거나 직접 업데이트하려면 이렇게 합니다.
 
 1. 메뉴바 아이콘 → **Floaty 종료**로 앱을 끕니다.
-2. 새 `Floaty.dmg`를 열고 Applications 폴더로 끌어다 놓아 기존 앱을 대체합니다.
+2. 새 dmg를 열고 Applications 폴더로 끌어다 놓아 기존 앱을 대체합니다.
 
 스티커와 설정은 앱과 따로 저장되므로 그대로 남습니다.
 

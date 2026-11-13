@@ -32,7 +32,7 @@ For flip-clock timers, alarms, and calendar alerts, see the companion app [Clock
 
 ## Install
 
-1. Download `Floaty.dmg` from [Releases](https://github.com/eddieee-git/mac-app-floaty/releases).
+1. Download `Floaty-<version>.dmg` (`Floaty.dmg` up to 0.2.1) from [Releases](https://github.com/eddieee-git/mac-app-floaty/releases).
 2. Open the dmg and drag Floaty to the Applications folder.
 3. Open Floaty.
 
@@ -60,7 +60,7 @@ Only the Command Line Tools are needed, not Xcode.
 scripts/build-app.sh
 ```
 
-This creates `build/Floaty.app` and `build/Floaty.dmg`.
+This creates `build/Floaty.app` and `build/Floaty-<version>.dmg`.
 
 ## Good to know
 

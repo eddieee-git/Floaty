@@ -90,7 +90,7 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         panel.onClick = { [weak self] in
             if self?.isAlarmRinging == true { self?.dismissAlarm() }
         }
-        panel.onEscape = { [weak self] in self?.collapse() }
+        panel.onEscape = { [weak self] in self?.toggleCollapsedByEscape() }
         panel.onEndFieldEditing = { [weak self] in self?.endFieldEditing() }
         panel.onTrashKey = { [weak self] in self?.delete(confirm: true) }
         panel.renameKey = { [weak settings] in settings?.renameTitleKey }
@@ -162,10 +162,10 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         panel.orderOut(nil)
     }
 
-    /// Esc. 이미 최소화했으면 그대로 둔다.
-    func collapse() {
-        guard !note.isCollapsed else { return }
+    /// Esc. 누를 때마다 최소화와 펼치기를 오간다. 펼치면 바로 이어 쓸 수 있게 본문에 초점을 둔다.
+    func toggleCollapsedByEscape() {
         toggleCollapsed()
+        if !note.isCollapsed && !isContentHidden { panel.makeFirstResponder(textView) }
     }
 
     /// 제목 변경 단축키를 누를 때마다 늘린다. 화면 쪽이 보고 제목 입력란을 연다.

@@ -43,7 +43,7 @@ final class StickyPanel: NSPanel {
         return sizeAtMouseDown
     }
 
-    /// Esc. 원래는 창 닫기(= 삭제)로 이어지던 것을 최소화로 바꾼다.
+    /// Esc. 원래는 창 닫기(= 삭제)로 이어지던 것을 최소화·펼치기로 바꾼다.
     var onEscape: (() -> Void)?
     /// ⌘⌫. 묻고 나서 휴지통으로 옮긴다.
     var onTrashKey: (() -> Void)?

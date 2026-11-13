@@ -2,6 +2,10 @@
 
 [한국어](CHANGELOG.md)
 
+## Next version
+
+- **Esc expands again:** Pressing Esc on a collapsed sticky expands it, ready for typing.
+
 ## 0.2.1
 
 - **Rename shortcut:** Press F2 in a sticky to rename it. Change or turn it off in Settings → Shortcuts.

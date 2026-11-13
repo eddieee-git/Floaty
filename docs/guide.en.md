@@ -67,7 +67,7 @@ Select text, then use the format row buttons or shortcuts. If nothing is selecte
 
 | Action | Result | How |
 |---|---|---|
-| Collapse | Shrinks to a small size showing the start of the title | Collapse button, double-click the title, Esc |
+| Collapse | Shrinks to a small size showing the start of the title. Do it again to expand | Collapse button, double-click the title, Esc |
 | Hide | The sticky disappears from the screen | **Hide** in the palette menu |
 | Hide all | Every sticky disappears or comes back | **Show/Hide All** in the menu bar, ⌃⌘H |
 | Collapse all | Collapses all if any is expanded; expands all if all are collapsed | **Collapse/Expand All** in the menu bar, ⌃⌘M |
@@ -160,7 +160,7 @@ The **current sticky** is the one you last clicked or typed in. Right after the 
 | Strikethrough | ⌘⇧X | Align Right | ⌘} |
 | Clear Formatting | ⌘\\ | Fonts window | ⌘T |
 | Next / Previous Sticky | ⌘\` / ⌘⇧\` | Rename | F2 |
-| Collapse | Esc | Move to Trash | ⌘⌫ (asks first) |
+| Collapse / Expand | Esc | Move to Trash | ⌘⌫ (asks first) |
 | Checklist | ⌘⇧L | Find in Sticky | ⌘⇧F (next ⌘G) |
 | Paste Without Formatting | ⌥⇧⌘V | Manage Stickies (search) | ⌘F |
 | Duplicate | ⌘D | Save to File | ⌘S |

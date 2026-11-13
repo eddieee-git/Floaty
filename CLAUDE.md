@@ -54,13 +54,13 @@ osascript -e 'quit app "Floaty"'; rm -rf /Applications/Floaty.app && ditto build
 - `README.md` / `README.en.md`
 - `docs/guide.md` / `docs/guide.en.md`: 사용법, 메뉴·단축키·설정 표
 - `docs/install.md` / `docs/install.en.md`: 설치, 보안 경고, 업데이트, 삭제
-- `CHANGELOG.md` / `CHANGELOG.en.md`: 버전마다 맨 위에 추가
+- `CHANGELOG.md` / `CHANGELOG.en.md`: 릴리스 전 변경은 맨 위 "다음 버전" / "Next version"에 모은다
 
 스크린샷은 `docs/images/`. 설정 창 모양을 바꾸면 해당 스크린샷도 다시 찍는다.
 
 ## 릴리스
 
-1. `Resources/Info.plist`의 `CFBundleShortVersionString`과 `CFBundleVersion`(1씩 올림)을 바꾸고, 두 변경 기록에 그 버전 항목을 쓴다.
+1. `Resources/Info.plist`의 `CFBundleShortVersionString`과 `CFBundleVersion`(1씩 올림)을 바꾸고, 두 변경 기록의 "다음 버전"/"Next version" 제목을 그 버전 번호로 바꾼다(없으면 새로 쓴다).
 2. `scripts/build-app.sh`로 빌드한다. 서명 키는 저장소 밖 `~/.config/floaty/update-signing.key`에 있다(`FLOATY_UPDATE_KEY`로 바꿀 수 있음). 키가 없으면 `.sig`가 안 생기고, 그 릴리스는 앱 안에서 자동 설치되지 않는다.
 3. `git push origin main`.
 4. 릴리스를 만든다. dmg, `.sig`, 0.2.1 호환 사본까지 네 파일을 모두 올린다.

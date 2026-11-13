@@ -2,7 +2,7 @@
 
 [한국어](CHANGELOG.md)
 
-## Next version
+## 0.2.2
 
 - **Esc expands again:** Pressing Esc on a collapsed sticky expands it, ready for typing.
 - **⌃⌘⌫ asks too:** Because this global shortcut works even while you use another app, it now always asks once, like ⌘⌫, whatever the delete confirmation setting is.
